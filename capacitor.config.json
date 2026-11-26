@@ -1,0 +1,6 @@
+{
+  "appId": "com.chefgodwin.uganda",
+  "appName": "Chef Godwin",
+  "webDir": "dist",
+  "server": { "androidScheme": "https" }
+}
