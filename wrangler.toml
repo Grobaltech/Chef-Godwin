@@ -1,8 +1,9 @@
 name = "chef-godwin-uganda"
-pages_build_output_dir = "dist"
+main = "src/worker.js"
 compatibility_date = "2024-11-01"
 
-# This is a Cloudflare Pages project.
-# Connect the GitHub repository in the Cloudflare dashboard to deploy.
-# Pages Git integration handles authentication; no API token is required here.
-# Pages Functions in ./functions (including /api/lead) are deployed with the site.
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api/*"]
