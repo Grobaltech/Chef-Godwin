@@ -14,7 +14,7 @@ const MODULES = [
   { key: 'services', label: 'Services', table: 'services', icon: '✧' },
   { key: 'courses', label: 'Courses', table: 'courses', icon: '♜' },
   { key: 'menu_items', label: 'Menu', table: 'menu_items', icon: '☷' },
-  { key: 'gallery_items', label: 'Gallery', table: 'gallery_items', icon: '▣' },
+  { key: 'gallery_items', label: 'Hero & gallery', table: 'gallery_items', icon: '▣' },
   { key: 'testimonials', label: 'Testimonials', table: 'testimonials', icon: '❞' },
   { key: 'staff_profiles', label: 'Staff & access', table: 'staff_profiles', icon: '♧' },
   { key: 'site_settings', label: 'Website settings', table: 'site_settings', icon: '⚙' }
@@ -32,7 +32,7 @@ const TITLES = {
   services: 'Catering services',
   courses: 'Cooking courses',
   menu_items: 'Food menu',
-  gallery_items: 'Photo gallery',
+  gallery_items: 'Homepage hero & photo gallery',
   testimonials: 'Customer testimonials',
   staff_profiles: 'Staff and role access',
   site_settings: 'Website settings'
@@ -53,7 +53,7 @@ const FIELD_LABELS = {
   duration_label: 'Duration', level: 'Level', quote: 'Testimonial',
   customer_name: 'Customer name', customer_title: 'Customer title',
   business_name: 'Business name', tagline: 'Tagline', whatsapp_number: 'WhatsApp number',
-  physical_address: 'Address', email_address: 'Email'
+  physical_address: 'Address', email_address: 'Email', sort_order: 'Display order'
 };
 
 const VISIBLE_FIELDS = {
@@ -68,7 +68,7 @@ const VISIBLE_FIELDS = {
   services: ['title', 'slug', 'summary', 'price_label', 'status'],
   courses: ['title', 'slug', 'duration_label', 'fee', 'status'],
   menu_items: ['name', 'price', 'currency', 'is_available', 'status'],
-  gallery_items: ['title', 'category', 'media_type', 'status'],
+  gallery_items: ['title', 'category', 'media_type', 'sort_order', 'status'], 
   testimonials: ['customer_name', 'quote', 'rating', 'status'],
   staff_profiles: ['full_name', 'phone', 'role', 'is_active'],
   site_settings: ['business_name', 'tagline', 'phone', 'whatsapp_number', 'email', 'physical_address']
@@ -138,7 +138,9 @@ export default function AdminDashboard({ user, profile, onSignOut }) {
     const query = supabase.from(table).select('*');
     const result = table === 'site_settings'
       ? await query.eq('id', true).maybeSingle()
-      : await query.order('created_at', { ascending: false }).limit(100);
+      : table === 'gallery_items'
+        ? await query.order('sort_order', { ascending: true }).order('created_at', { ascending: false }).limit(100)
+        : await query.order('created_at', { ascending: false }).limit(100);
     const data = table === 'site_settings' ? (result.data ? [result.data] : []) : result.data;
     const error = result.error;
     if (error) setNotice(error.message);
@@ -256,6 +258,7 @@ export default function AdminDashboard({ user, profile, onSignOut }) {
           </div>
 
           {notice && <div className="rounded-xl border border-saffron/40 bg-saffron/10 px-4 py-3 text-sm text-ink" role="status">{notice}</div>}
+          {active === 'gallery_items' && <div className="rounded-2xl border border-leaf/15 bg-white p-4 sm:p-5"><p className="font-extrabold text-leaf">Homepage hero photography</p><p className="mt-1 text-sm leading-6 text-stone-600">The original Chef Godwin hero photograph appears first. Published images added here and photos attached to published menu items can then rotate in the homepage slider. Use Display order to arrange gallery photos; videos remain in the gallery and are excluded from the hero.</p></div>}
 
           {active === 'overview' ? <>
             <div className="rounded-3xl bg-leaf p-6 text-white sm:p-8">
@@ -277,7 +280,7 @@ export default function AdminDashboard({ user, profile, onSignOut }) {
               </div>
               <div className="rounded-2xl border border-stone-200 bg-white p-5">
                 <h3 className="font-extrabold">Website publishing</h3>
-                <p className="mt-2 text-sm text-stone-500">Keep the public website active with current services, courses, menu items, photos and customer stories.</p>
+                <p className="mt-2 text-sm text-stone-500">Manage published services, courses, menu items, testimonials and the photographs that appear in the homepage hero and public gallery.</p>
                 <div className="mt-4 flex flex-wrap gap-2">{['content_pages','services','courses','menu_items','gallery_items','testimonials'].filter(key => visibleModules.some(item => item.key === key)).map(key => <button key={key} onClick={() => setActive(key)} className="rounded-full border border-stone-200 px-3 py-2 text-xs font-bold hover:border-leaf hover:text-leaf">{MODULES.find(m=>m.key===key).label}</button>)}</div>
               </div>
             </div>
@@ -309,8 +312,8 @@ export default function AdminDashboard({ user, profile, onSignOut }) {
                 active === 'services' ? ['title','slug','summary','price_label','image_url','status'] :
                 active === 'courses' ? ['title','slug','summary','duration_label','level','fee','status'] :
                 active === 'menu_items' ? ['name','description','price','currency','image_url','status'] :
-                active === 'gallery_items' ? ['title','description','media_url','media_type','category','alt_text','status'] :
-                ['customer_name','customer_title','quote','rating','status']).map(field => <label key={field} className="grid gap-1 text-xs font-bold text-stone-600">{FIELD_LABELS[field] || field}<input name={field} required={['title','slug','full_name','name','phone','interest','quote','customer_name','media_url'].includes(field)} type={field.includes('date') || field.endsWith('_at') ? 'datetime-local' : field === 'fee' || field === 'rating' || field === 'price' ? 'number' : 'text'} defaultValue={field === 'status' ? (STATUS_OPTIONS[active]?.[0] || 'new') : field === 'currency' ? 'UGX' : ''} className="rounded-lg border border-stone-200 px-3 py-2 text-sm font-normal" /></label>)}
+                active === 'gallery_items' ? ['title','description','media_url','media_type','category','alt_text','sort_order','status'] :
+                ['customer_name','customer_title','quote','rating','status']).map(field => <label key={field} className="grid gap-1 text-xs font-bold text-stone-600">{FIELD_LABELS[field] || field}<input name={field} required={['title','slug','full_name','name','phone','interest','quote','customer_name','media_url'].includes(field)} type={field.includes('date') || field.endsWith('_at') ? 'datetime-local' : field === 'fee' || field === 'rating' || field === 'price' || field === 'sort_order' ? 'number' : 'text'} defaultValue={field === 'status' ? (STATUS_OPTIONS[active]?.[0] || 'new') : field === 'currency' ? 'UGX' : ''} className="rounded-lg border border-stone-200 px-3 py-2 text-sm font-normal" /></label>)}
               <div className="flex gap-2 sm:col-span-2"><button disabled={saving} className="rounded-lg bg-leaf px-4 py-2 text-sm font-bold text-white">Save record</button><button type="button" onClick={()=>setCreating(false)} className="rounded-lg border border-stone-200 px-4 py-2 text-sm font-bold">Cancel</button></div>
             </form>}
 
