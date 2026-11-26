@@ -117,6 +117,7 @@ export default function AdminDashboard({ user, profile, onSignOut }) {
   const [notice, setNotice] = useState('');
   const [search, setSearch] = useState('');
   const [creating, setCreating] = useState(false);
+  const [editingRow, setEditingRow] = useState(null);
   const [saving, setSaving] = useState(false);
   const [inviteBusy, setInviteBusy] = useState(false);
   const role = profile?.role || 'staff';
@@ -207,6 +208,7 @@ export default function AdminDashboard({ user, profile, onSignOut }) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const values = Object.fromEntries(form.entries());
+    if (values.sort_order !== undefined) values.sort_order = values.sort_order === '' ? null : Number(values.sort_order);
     const { error } = await supabase.from(module.table).insert(values);
     if (error) setNotice(error.message);
     else {
@@ -214,6 +216,20 @@ export default function AdminDashboard({ user, profile, onSignOut }) {
       setCreating(false);
       loadRows(module.table);
       loadCounts();
+    }
+  }
+
+  async function saveGalleryEdit(event) {
+    event.preventDefault();
+    if (!editingRow) return;
+    const values = Object.fromEntries(new FormData(event.currentTarget).entries());
+    values.sort_order = values.sort_order === '' ? null : Number(values.sort_order);
+    const { error } = await supabase.from('gallery_items').update(values).eq('id', editingRow.id);
+    if (error) setNotice(error.message);
+    else {
+      setNotice('Homepage photo updated.');
+      setEditingRow(null);
+      loadRows('gallery_items');
     }
   }
 
@@ -302,6 +318,18 @@ export default function AdminDashboard({ user, profile, onSignOut }) {
               <label className="grid gap-1 text-xs font-bold text-stone-600">Role<select name="role" required className="rounded-lg border border-stone-200 px-3 py-2 text-sm font-normal"><option value="admin">Administrator</option><option value="manager">Manager</option><option value="content_editor">Content editor</option><option value="chef">Chef</option><option value="events">Events</option><option value="admissions">Admissions</option><option value="finance">Finance</option><option value="receptionist">Receptionist</option></select></label>
               <div className="flex gap-2 sm:col-span-2"><button disabled={inviteBusy} className="rounded-lg bg-leaf px-4 py-2 text-sm font-bold text-white">{inviteBusy ? 'Sending invitation…' : 'Send invitation'}</button><button type="button" onClick={()=>setCreating(false)} className="rounded-lg border border-stone-200 px-4 py-2 text-sm font-bold">Cancel</button></div>
             </form>}
+            {editingRow && active === 'gallery_items' && <form onSubmit={saveGalleryEdit} className="grid gap-3 rounded-2xl border border-saffron/40 bg-white p-5 sm:grid-cols-2">
+              <h3 className="font-extrabold sm:col-span-2">Edit homepage photo or gallery item</h3>
+              <label className="grid gap-1 text-xs font-bold text-stone-600">Title<input name="title" required defaultValue={editingRow.title || ''} className="rounded-lg border border-stone-200 px-3 py-2 text-sm font-normal" /></label>
+              <label className="grid gap-1 text-xs font-bold text-stone-600">Image or video URL<input name="media_url" required type="url" defaultValue={editingRow.media_url || ''} className="rounded-lg border border-stone-200 px-3 py-2 text-sm font-normal" /></label>
+              <label className="grid gap-1 text-xs font-bold text-stone-600">Media type<select name="media_type" defaultValue={editingRow.media_type || 'image'} className="rounded-lg border border-stone-200 px-3 py-2 text-sm font-normal"><option value="image">Image</option><option value="video">Video</option></select></label>
+              <label className="grid gap-1 text-xs font-bold text-stone-600">Category<input name="category" defaultValue={editingRow.category || ''} className="rounded-lg border border-stone-200 px-3 py-2 text-sm font-normal" /></label>
+              <label className="grid gap-1 text-xs font-bold text-stone-600 sm:col-span-2">Description<textarea name="description" rows="2" defaultValue={editingRow.description || ''} className="rounded-lg border border-stone-200 px-3 py-2 text-sm font-normal" /></label>
+              <label className="grid gap-1 text-xs font-bold text-stone-600">Alternative text<input name="alt_text" defaultValue={editingRow.alt_text || ''} className="rounded-lg border border-stone-200 px-3 py-2 text-sm font-normal" /></label>
+              <label className="grid gap-1 text-xs font-bold text-stone-600">Display order<input name="sort_order" type="number" min="0" defaultValue={editingRow.sort_order ?? 0} className="rounded-lg border border-stone-200 px-3 py-2 text-sm font-normal" /></label>
+              <label className="grid gap-1 text-xs font-bold text-stone-600">Publishing status<select name="status" defaultValue={editingRow.status || 'draft'} className="rounded-lg border border-stone-200 px-3 py-2 text-sm font-normal"><option value="draft">Draft</option><option value="published">Published</option><option value="archived">Archived</option></select></label>
+              <div className="flex gap-2 sm:col-span-2"><button className="rounded-lg bg-leaf px-4 py-2 text-sm font-bold text-white">Save changes</button><button type="button" onClick={() => setEditingRow(null)} className="rounded-lg border border-stone-200 px-4 py-2 text-sm font-bold">Cancel</button></div>
+            </form>}
             {creating && active !== 'staff_profiles' && <form onSubmit={saveNew} className="grid gap-3 rounded-2xl border border-stone-200 bg-white p-5 sm:grid-cols-2">
               <h3 className="font-extrabold sm:col-span-2">Create {module.label.toLowerCase()}</h3>
               {(active === 'leads' ? ['full_name','phone','email','interest','source','status','notes'] :
@@ -321,7 +349,7 @@ export default function AdminDashboard({ user, profile, onSignOut }) {
               {loading ? <p className="p-8 text-center text-sm text-stone-500">Loading records…</p> : visibleRows.length === 0 ? <div className="p-10 text-center"><div className="text-3xl">⌁</div><p className="mt-2 font-bold">Nothing here yet</p><p className="mt-1 text-sm text-stone-500">New website enquiries and records will appear here.</p></div> :
                 <div className="overflow-x-auto"><table className="w-full min-w-[680px] text-left text-sm">
                   <thead className="bg-stone-50 text-xs uppercase tracking-wide text-stone-500"><tr>{(VISIBLE_FIELDS[active] || Object.keys(visibleRows[0]).slice(0,6)).map(field=><th key={field} className="px-4 py-3 font-bold">{FIELD_LABELS[field] || field.replaceAll('_',' ')}</th>)}<th className="px-4 py-3">Manage</th></tr></thead>
-                  <tbody className="divide-y divide-stone-100">{visibleRows.map(row=><tr key={row.id} className="hover:bg-stone-50/70">{(VISIBLE_FIELDS[active] || Object.keys(row).slice(0,6)).map(field=><td key={field} className="max-w-[240px] px-4 py-3 text-stone-700">{field === 'status' ? <span className="rounded-full bg-saffron/15 px-2.5 py-1 text-xs font-bold capitalize">{row[field]}</span> : field === 'amount' || field === 'fee' || field === 'price' || field === 'quoted_amount' || field === 'final_amount' ? money(row[field],row.currency || 'UGX') : field.endsWith('_at') || field.endsWith('_date') || field === 'created_at' || field === 'updated_at' ? date(row[field]) : field === 'is_active' || field === 'is_available' ? (row[field] ? 'Yes' : 'No') : <span className="block truncate">{row[field] ?? '—'}</span>}</td>)}<td className="px-4 py-3">{STATUS_OPTIONS[active] && <select aria-label="Change status" value={row.status || ''} onChange={e=>updateStatus(row,e.target.value)} className="rounded-lg border border-stone-200 bg-white px-2 py-1.5 text-xs"><option value="">Status</option>{STATUS_OPTIONS[active].map(value=><option key={value} value={value}>{value}</option>)}</select>}{active==='staff_profiles' && <div className="flex min-w-[170px] flex-col gap-2"><select aria-label="Staff role" value={row.role} disabled={row.role==='owner' || !['owner','admin'].includes(role)} onChange={e=>updateStaff(row,{role:e.target.value})} className="rounded-lg border border-stone-200 bg-white px-2 py-1.5 text-xs"><option value="admin">Administrator</option><option value="manager">Manager</option><option value="content_editor">Content editor</option><option value="chef">Chef</option><option value="events">Events</option><option value="admissions">Admissions</option><option value="finance">Finance</option><option value="receptionist">Receptionist</option></select><button disabled={row.role==='owner' || !['owner','admin'].includes(role)} onClick={()=>updateStaff(row,{is_active:!row.is_active})} className="rounded-lg border border-stone-200 px-2 py-1 text-xs font-bold">{row.is_active?'Suspend access':'Restore access'}</button></div>}</td></tr>)}</tbody>
+                  <tbody className="divide-y divide-stone-100">{visibleRows.map(row=><tr key={row.id} className="hover:bg-stone-50/70">{(VISIBLE_FIELDS[active] || Object.keys(row).slice(0,6)).map(field=><td key={field} className="max-w-[240px] px-4 py-3 text-stone-700">{field === 'status' ? <span className="rounded-full bg-saffron/15 px-2.5 py-1 text-xs font-bold capitalize">{row[field]}</span> : field === 'amount' || field === 'fee' || field === 'price' || field === 'quoted_amount' || field === 'final_amount' ? money(row[field],row.currency || 'UGX') : field.endsWith('_at') || field.endsWith('_date') || field === 'created_at' || field === 'updated_at' ? date(row[field]) : field === 'is_active' || field === 'is_available' ? (row[field] ? 'Yes' : 'No') : <span className="block truncate">{row[field] ?? '—'}</span>}</td>)}<td className="px-4 py-3">{STATUS_OPTIONS[active] && <select aria-label="Change status" value={row.status || ''} onChange={e=>updateStatus(row,e.target.value)} className="rounded-lg border border-stone-200 bg-white px-2 py-1.5 text-xs"><option value="">Status</option>{STATUS_OPTIONS[active].map(value=><option key={value} value={value}>{value}</option>)}</select>}{active === 'gallery_items' && <button onClick={() => { setCreating(false); setEditingRow(row); }} className="mb-2 rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-bold text-leaf hover:border-leaf">Edit photo</button>}{active==='staff_profiles' && <div className="flex min-w-[170px] flex-col gap-2"><select aria-label="Staff role" value={row.role} disabled={row.role==='owner' || !['owner','admin'].includes(role)} onChange={e=>updateStaff(row,{role:e.target.value})} className="rounded-lg border border-stone-200 bg-white px-2 py-1.5 text-xs"><option value="admin">Administrator</option><option value="manager">Manager</option><option value="content_editor">Content editor</option><option value="chef">Chef</option><option value="events">Events</option><option value="admissions">Admissions</option><option value="finance">Finance</option><option value="receptionist">Receptionist</option></select><button disabled={row.role==='owner' || !['owner','admin'].includes(role)} onClick={()=>updateStaff(row,{is_active:!row.is_active})} className="rounded-lg border border-stone-200 px-2 py-1 text-xs font-bold">{row.is_active?'Suspend access':'Restore access'}</button></div>}</td></tr>)}</tbody>
                 </table></div>}
             </div>
           </> : null}
