@@ -140,7 +140,6 @@ function PublicSite({ onAdmin }) {
 }
 
 export default function App({startupError=''}) {
-  if (startupError) return <main className="flex min-h-screen items-center justify-center bg-cream px-4"><div className="max-w-lg rounded-2xl bg-white p-8 shadow"><h1 className="text-2xl font-extrabold text-leaf">Chef Godwin could not connect</h1><p className="mt-3 text-sm leading-6 text-stone-600">{startupError}</p><p className="mt-3 text-xs text-stone-500">The browser only receives the Supabase URL and publishable key. The private service-role key is never sent to the browser.</p><button onClick={()=>window.location.reload()} className="mt-6 rounded-lg bg-chili px-4 py-2 font-bold text-white">Try again</button></div></main>;
   const [session,setSession]=useState(null),[profile,setProfile]=useState(null),[authLoading,setAuthLoading]=useState(true),[showLogin,setShowLogin]=useState(window.location.pathname.startsWith('/admin')||window.location.pathname.startsWith('/login')),[profileError,setProfileError]=useState('');
   useEffect(()=>{
     new WOW({live:false,animateClass:'animate__animated'}).init();
@@ -164,6 +163,7 @@ export default function App({startupError=''}) {
     getProfile();return()=>{alive=false}
   },[session]);
   async function signOut(){await supabase.auth.signOut();setShowLogin(false);window.history.replaceState({},'','/')}
+  if (startupError) return <main className="flex min-h-screen items-center justify-center bg-cream px-4"><div className="max-w-lg rounded-2xl bg-white p-8 shadow"><h1 className="text-2xl font-extrabold text-leaf">Chef Godwin could not connect</h1><p className="mt-3 text-sm leading-6 text-stone-600">{startupError}</p><p className="mt-3 text-xs text-stone-500">The browser only receives the Supabase URL and publishable key. The private service-role key is never sent to the browser.</p><button onClick={()=>window.location.reload()} className="mt-6 rounded-lg bg-chili px-4 py-2 font-bold text-white">Try again</button></div></main>;
   if(session&&(authLoading||(!profile&&!profileError)))return <div className="flex min-h-screen items-center justify-center bg-cream text-leaf">Checking your staff access…</div>;
   if(session&&profile)return <AdminDashboard user={session.user} profile={profile} onSignOut={signOut}/>;
   if(session&&profileError)return <main className="flex min-h-screen items-center justify-center bg-cream px-4"><div className="max-w-md rounded-2xl bg-white p-8 shadow"><h1 className="text-2xl font-extrabold text-leaf">Access not available</h1><p className="mt-3 text-sm text-stone-600">{profileError}</p><button onClick={signOut} className="mt-6 rounded-lg bg-chili px-4 py-2 font-bold text-white">Sign out</button></div></main>;
