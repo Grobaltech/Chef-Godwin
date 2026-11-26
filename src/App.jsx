@@ -2,7 +2,11 @@ import { useEffect, useState } from 'react';
 import WOW from 'wow.js';
 import { gsap } from 'gsap';
 import { Swiper, SwiperSlide } from 'swiper/react';
+import { Autoplay, EffectFade, Navigation, Pagination } from 'swiper/modules';
 import 'swiper/css';
+import 'swiper/css/effect-fade';
+import 'swiper/css/navigation';
+import 'swiper/css/pagination';
 import 'animate.css';
 import LeadForm from './components/LeadForm';
 import AdminDashboard from './components/AdminDashboard';
@@ -66,16 +70,52 @@ function PublicSite({ onAdmin }) {
   const contact=(text)=>site?.whatsapp_number?'https://wa.me/'+String(site.whatsapp_number).replace(/[^0-9]/g,'')+'?text='+encodeURIComponent(text):waLink(text);
   const shownServices=services.length?services:EVENT_TYPES.map(title=>({id:title,title,summary:'Made with care for your special gathering.'}));
   const shownCourses=courses.length?courses:COURSES.map(title=>({id:title,title,summary:'Practical, hands-on cooking lessons.'}));
+  const heroSlides=[
+    ...gallery.filter(item=>item.media_type!=='video'&&item.media_url).map(item=>({image:item.media_url,title:item.title||'Food made for moments that matter.',description:item.description||'Thoughtful catering and practical culinary training.',alt:item.alt_text||item.title||'Chef Godwin food'})),
+    ...menu.filter(item=>item.image_url).map(item=>({image:item.image_url,title:item.name||'From our kitchen',description:item.description||'Freshly prepared with care.',alt:item.name||'Chef Godwin menu'}))
+  ].slice(0,6);
+  if(!heroSlides.length)heroSlides.push({image:'/hero-food.jpg',title:'Food made for moments that matter.',description:'Thoughtful catering for celebrations, alongside practical cooking lessons for the next generation of great cooks.',alt:'Chef Godwin prepared food'});
+
   return <>
     <header className="sticky top-0 z-20 bg-leaf text-white shadow-md" style={{paddingTop:'env(safe-area-inset-top, 0px)'}}><div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
       <a href="#top" className="flex items-center gap-3"><img src="/logo.jpg" alt="Chef Godwin emblem" className="h-12 w-10 rounded-sm object-contain"/><span className="font-display text-lg font-extrabold">Chef Godwin</span></a>
       <nav className="flex items-center gap-3 text-xs font-semibold sm:gap-5 sm:text-sm"><a href="#catering">Catering</a><a href="#school">School</a>{menu.length>0&&<a href="#menu">Menu</a>}<a href={contact('Hello Chef Godwin')} className="rounded-lg bg-saffron px-3 py-2 text-ink">WhatsApp</a></nav>
     </div></header>
     <main id="top">
-      <section className="relative overflow-hidden bg-leaf text-white"><div className="absolute -right-24 -top-28 h-96 w-96 rounded-full border-[45px] border-white/5"/><div className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-20 sm:py-28 lg:grid-cols-[1.15fr_.85fr]">
-        <div className="hero-copy relative z-10"><p className="text-sm font-bold uppercase tracking-widest text-saffron">{site?.tagline||BRAND.tagline}</p><h1 className="mt-5 max-w-3xl text-5xl font-extrabold leading-tight sm:text-7xl">Food made for moments that matter.</h1><p className="mt-6 max-w-xl text-lg leading-8 text-white/75">Thoughtful catering for introductions, weddings and celebrations, alongside practical cooking lessons for the next generation of great cooks.</p><div className="mt-9 flex flex-wrap gap-3"><a href="#catering" className="rounded-xl bg-saffron px-6 py-3.5 font-extrabold text-ink">Plan your event</a><a href="#school" className="rounded-xl border border-white/30 px-6 py-3.5 font-bold">Explore the school</a></div></div>
-        <div className="hero-visual relative"><div className="aspect-[4/5] overflow-hidden rounded-[2rem] bg-white/10 shadow-2xl"><img src="/hero-food.jpg" alt="Chef Godwin prepared food" className="h-full w-full object-cover" onError={e=>{e.currentTarget.style.display='none'}}/></div><div className="absolute -bottom-5 -left-5 rounded-2xl bg-saffron p-5 text-ink shadow-xl"><p className="text-xs font-bold uppercase">Our promise</p><p className="mt-1 text-xl font-extrabold">Every plate tells a story.</p></div></div>
-      </div></section>
+      <section className="relative isolate min-h-[620px] overflow-hidden bg-leaf text-white sm:min-h-[700px]">
+        <Swiper
+          className="chef-hero-swiper absolute inset-0 h-full w-full"
+          modules={[Autoplay,EffectFade,Navigation,Pagination]}
+          effect="fade"
+          fadeEffect={{crossFade:true}}
+          slidesPerView={1}
+          loop={heroSlides.length>1}
+          autoplay={heroSlides.length>1?{delay:5500,disableOnInteraction:false,pauseOnMouseEnter:true}:false}
+          navigation
+          pagination={{clickable:true}}
+          speed={900}
+        >
+          {heroSlides.map((slide,index)=><SwiperSlide key={slide.image+'-'+index} className="relative">
+            <img src={slide.image} alt={slide.alt} className="absolute inset-0 h-full w-full object-cover" fetchPriority={index===0?'high':'auto'} onError={e=>{e.currentTarget.style.display='none'}}/>
+            <div className="absolute inset-0 bg-gradient-to-r from-[#071f19]/95 via-[#0b3b2e]/75 to-[#0b3b2e]/25"/>
+            <div className="relative z-10 mx-auto flex min-h-[620px] max-w-6xl items-center px-6 py-24 sm:min-h-[700px] sm:px-10">
+              <div className="hero-copy max-w-3xl">
+                <p className="text-sm font-bold uppercase tracking-[0.2em] text-saffron">{site?.tagline||BRAND.tagline}</p>
+                <h1 className="mt-5 max-w-3xl text-5xl font-extrabold leading-tight sm:text-7xl">{index===0?'Food made for moments that matter.':slide.title}</h1>
+                <p className="mt-6 max-w-xl text-lg leading-8 text-white/85">{slide.description}</p>
+                <div className="mt-9 flex flex-wrap gap-3">
+                  <a href="#catering" className="rounded-xl bg-saffron px-6 py-3.5 font-extrabold text-ink shadow-lg">Plan your event</a>
+                  <a href="#school" className="rounded-xl border border-white/50 bg-white/10 px-6 py-3.5 font-bold text-white backdrop-blur-sm">Explore the school</a>
+                </div>
+              </div>
+            </div>
+          </SwiperSlide>)}
+        </Swiper>
+        <div className="pointer-events-none absolute bottom-8 right-6 z-10 hidden rounded-2xl bg-saffron p-4 text-ink shadow-xl sm:block">
+          <p className="text-[10px] font-bold uppercase tracking-widest">Our promise</p>
+          <p className="mt-1 text-lg font-extrabold">Every plate tells a story.</p>
+        </div>
+      </section>
       <section id="catering" className="mx-auto grid max-w-6xl gap-12 px-4 py-20 lg:grid-cols-2"><div><p className="text-xs font-extrabold uppercase tracking-widest text-chili">Gather beautifully</p><h2 className="mt-3 text-4xl font-extrabold text-leaf">Catering for your big moments.</h2><p className="mt-5 max-w-lg leading-7 text-stone-600">From traditional introductions and weddings to private celebrations and corporate occasions, tell us what you are planning. Our team will help shape the menu and details.</p><div className="mt-7 grid gap-3 sm:grid-cols-2">{shownServices.map(item=><div key={item.id} className="rounded-2xl border border-stone-200 bg-white p-4"><h3 className="font-extrabold text-leaf">{item.title}</h3><p className="mt-1 text-sm text-stone-500">{item.summary}</p>{item.price_label&&<p className="mt-2 text-sm font-bold text-chili">{item.price_label}</p>}</div>)}</div></div><div className="rounded-3xl bg-white p-5 shadow-xl ring-1 ring-stone-200 sm:p-8"><h3 className="mb-5 text-2xl font-extrabold text-leaf">Tell us about your event</h3><LeadForm kind="catering" eventTypes={EVENT_TYPES}/></div></section>
       <section id="school" className="bg-[#f1eee4] py-20"><div className="mx-auto grid max-w-6xl gap-12 px-4 lg:grid-cols-2"><div><p className="text-xs font-extrabold uppercase tracking-widest text-chili">Learn the craft</p><h2 className="mt-3 text-4xl font-extrabold text-leaf">A cooking school built around real kitchen skills.</h2><p className="mt-5 max-w-lg leading-7 text-stone-600">Build confidence, learn technique and understand how to prepare food for people. Explore the current courses and send an application.</p><LearningFlipbook courses={shownCourses}/><div className="mt-7 grid gap-3">{shownCourses.map(course=><div key={course.id} className="rounded-2xl bg-white p-5 shadow-sm"><div className="flex items-start justify-between gap-3"><h3 className="font-extrabold text-leaf">{course.title}</h3>{course.duration_label&&<span className="shrink-0 rounded-full bg-saffron/20 px-3 py-1 text-xs font-bold">{course.duration_label}</span>}</div><p className="mt-2 text-sm text-stone-500">{course.summary}</p>{course.fee!=null&&<p className="mt-3 font-bold text-chili">{new Intl.NumberFormat('en-UG').format(course.fee)} {course.currency||'UGX'}</p>}</div>)}</div></div><div className="rounded-3xl bg-white p-5 shadow-xl sm:p-8"><h3 className="mb-5 text-2xl font-extrabold text-leaf">Apply to the cooking school</h3><LeadForm kind="school" courses={shownCourses}/></div></div></section>
       {menu.length>0&&<section id="menu" className="mx-auto max-w-6xl px-4 py-20"><p className="text-xs font-extrabold uppercase tracking-widest text-chili">From our kitchen</p><h2 className="mt-3 text-4xl font-extrabold text-leaf">A taste of the menu.</h2><div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{menu.map(item=><article key={item.id} className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-stone-200">{item.image_url&&<img src={item.image_url} alt={item.name} className="h-48 w-full object-cover"/>}<div className="p-5"><h3 className="font-extrabold">{item.name}</h3><p className="mt-2 text-sm text-stone-500">{item.description}</p>{item.price!=null&&<p className="mt-3 font-bold text-chili">{new Intl.NumberFormat('en-UG').format(item.price)} {item.currency||'UGX'}</p>}</div></article>)}</div></section>}
