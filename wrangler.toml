@@ -1,4 +1,4 @@
-name = "chef-godwin-uganda"
+name = "chef-godwin"
 main = "src/worker.js"
 compatibility_date = "2024-11-01"
 
