@@ -108,6 +108,7 @@ export default function AdminDashboard({ user, profile, onSignOut }) {
   const [search, setSearch] = useState('');
   const [creating, setCreating] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [inviteBusy, setInviteBusy] = useState(false);
   const module = MODULES.find(item => item.key === active);
   const role = profile?.role || 'staff';
 
@@ -164,6 +165,29 @@ export default function AdminDashboard({ user, profile, onSignOut }) {
       setRows(current => current.map(item => item.id === row.id ? { ...item, ...changes } : item));
       setNotice('Staff access updated.');
     }
+  }
+
+  async function inviteStaff(event) {
+    event.preventDefault();
+    setInviteBusy(true);
+    setNotice('');
+    const values = Object.fromEntries(new FormData(event.currentTarget).entries());
+    const { data } = await supabase.auth.getSession();
+    try {
+      const response = await fetch('/api/staff/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + data.session.access_token },
+        body: JSON.stringify(values)
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Invitation failed.');
+      setNotice(result.message || 'Invitation sent.');
+      setCreating(false);
+      loadRows('staff_profiles');
+    } catch (error) {
+      setNotice(error.message || 'Could not invite staff.');
+    }
+    setInviteBusy(false);
   }
 
   async function saveNew(event) {
@@ -252,11 +276,19 @@ export default function AdminDashboard({ user, profile, onSignOut }) {
               <div className="flex gap-2">
                 <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search records..." className="min-w-0 rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm outline-none focus:border-leaf" />
                 <button onClick={() => loadRows(module.table)} className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm font-bold">Refresh</button>
-                {canCreate && <button onClick={() => setCreating(v=>!v)} className="rounded-lg bg-chili px-4 py-2 text-sm font-bold text-white">+ Add new</button>}
+                {(canCreate || (active === 'staff_profiles' && role === 'owner')) && <button onClick={() => setCreating(v=>!v)} className="rounded-lg bg-chili px-4 py-2 text-sm font-bold text-white">{active === 'staff_profiles' ? '+ Invite staff' : '+ Add new'}</button>}
               </div>
             </div>
 
-            {creating && <form onSubmit={saveNew} className="grid gap-3 rounded-2xl border border-stone-200 bg-white p-5 sm:grid-cols-2">
+            {creating && active === 'staff_profiles' && role === 'owner' && <form onSubmit={inviteStaff} className="grid gap-3 rounded-2xl border border-stone-200 bg-white p-5 sm:grid-cols-2">
+              <h3 className="font-extrabold sm:col-span-2">Invite a staff member</h3>
+              <label className="grid gap-1 text-xs font-bold text-stone-600">Full name<input name="full_name" required className="rounded-lg border border-stone-200 px-3 py-2 text-sm font-normal"/></label>
+              <label className="grid gap-1 text-xs font-bold text-stone-600">Email address<input name="email" type="email" required className="rounded-lg border border-stone-200 px-3 py-2 text-sm font-normal"/></label>
+              <label className="grid gap-1 text-xs font-bold text-stone-600">Phone number<input name="phone" type="tel" className="rounded-lg border border-stone-200 px-3 py-2 text-sm font-normal"/></label>
+              <label className="grid gap-1 text-xs font-bold text-stone-600">Role<select name="role" required className="rounded-lg border border-stone-200 px-3 py-2 text-sm font-normal"><option value="admin">Administrator</option><option value="manager">Manager</option><option value="content_editor">Content editor</option><option value="chef">Chef</option><option value="events">Events</option><option value="admissions">Admissions</option><option value="finance">Finance</option><option value="receptionist">Receptionist</option></select></label>
+              <div className="flex gap-2 sm:col-span-2"><button disabled={inviteBusy} className="rounded-lg bg-leaf px-4 py-2 text-sm font-bold text-white">{inviteBusy ? 'Sending invitation…' : 'Send invitation'}</button><button type="button" onClick={()=>setCreating(false)} className="rounded-lg border border-stone-200 px-4 py-2 text-sm font-bold">Cancel</button></div>
+            </form>}
+            {creating && active !== 'staff_profiles' && <form onSubmit={saveNew} className="grid gap-3 rounded-2xl border border-stone-200 bg-white p-5 sm:grid-cols-2">
               <h3 className="font-extrabold sm:col-span-2">Create {module.label.toLowerCase()}</h3>
               {(active === 'leads' ? ['full_name','phone','email','interest','source','status','notes'] :
                 active === 'customers' ? ['full_name','phone','email','source','notes'] :
