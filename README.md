@@ -5,6 +5,9 @@ Website, PWA and Android app for Chef Godwin's catering and cooking school.
 Stack: React + Tailwind, Animate.css + WOW.js, vite-plugin-pwa, Cloudflare Pages + Pages Functions,
 Cloudflare Turnstile, Supabase (Postgres), Capacitor (Android APK), GitHub Actions.
 
+Brand palette: forest green (#0B3B2E), warm gold (#D8A52B), deep red (#A52A2A), and cream (#FFF9E8).
+The supplied emblem is stored at `public/logo.jpg` and used in the website header and PWA icon.
+
 ## 1. Run locally
 ```bash
 npm install
@@ -50,7 +53,6 @@ The APK wraps the built site with Capacitor.
 
 ## 6. Replace placeholders
 - `src/config.js`: WhatsApp number, course list, event types, tagline
-- `public/icon-*.png`: real logo
 - Add Chef Godwin's photos and TikTok/YouTube links
 
 ## Next
