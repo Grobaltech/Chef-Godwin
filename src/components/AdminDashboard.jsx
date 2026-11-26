@@ -273,12 +273,12 @@ export default function AdminDashboard({ user, profile, onSignOut }) {
             <div className="grid gap-4 xl:grid-cols-2">
               <div className="rounded-2xl border border-stone-200 bg-white p-5">
                 <h3 className="font-extrabold">Operations</h3>
-                <div className="mt-4 grid grid-cols-2 gap-3">{['leads','catering_bookings','school_applications','crm_activities','events','payments'].map(key => <button key={key} onClick={() => setActive(key)} className="rounded-xl bg-stone-50 p-3 text-left hover:bg-leaf/10"><span className="block text-xl font-extrabold">{counts[key] ?? 0}</span><span className="text-xs capitalize text-stone-500">{key.replaceAll('_',' ')}</span></button>)}</div>
+                <div className="mt-4 grid grid-cols-2 gap-3">{['leads','catering_bookings','school_applications','crm_activities','events','payments'].filter(key => visibleModules.some(item => item.key === key)).map(key => <button key={key} onClick={() => setActive(key)} className="rounded-xl bg-stone-50 p-3 text-left hover:bg-leaf/10"><span className="block text-xl font-extrabold">{counts[key] ?? 0}</span><span className="text-xs capitalize text-stone-500">{key.replaceAll('_',' ')}</span></button>)}</div>
               </div>
               <div className="rounded-2xl border border-stone-200 bg-white p-5">
                 <h3 className="font-extrabold">Website publishing</h3>
                 <p className="mt-2 text-sm text-stone-500">Keep the public website active with current services, courses, menu items, photos and customer stories.</p>
-                <div className="mt-4 flex flex-wrap gap-2">{['content_pages','services','courses','menu_items','gallery_items','testimonials'].map(key => <button key={key} onClick={() => setActive(key)} className="rounded-full border border-stone-200 px-3 py-2 text-xs font-bold hover:border-leaf hover:text-leaf">{MODULES.find(m=>m.key===key).label}</button>)}</div>
+                <div className="mt-4 flex flex-wrap gap-2">{['content_pages','services','courses','menu_items','gallery_items','testimonials'].filter(key => visibleModules.some(item => item.key === key)).map(key => <button key={key} onClick={() => setActive(key)} className="rounded-full border border-stone-200 px-3 py-2 text-xs font-bold hover:border-leaf hover:text-leaf">{MODULES.find(m=>m.key===key).label}</button>)}</div>
               </div>
             </div>
           </> : module?.table ? <>
