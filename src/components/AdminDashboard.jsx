@@ -1,0 +1,272 @@
+import { useEffect, useMemo, useState } from 'react';
+import { supabase } from '../lib/supabase';
+
+const MODULES = [
+  { key: 'overview', label: 'Overview', icon: '⌂' },
+  { key: 'leads', label: 'Leads', table: 'leads', icon: '◎' },
+  { key: 'catering_bookings', label: 'Catering bookings', table: 'catering_bookings', icon: '♨' },
+  { key: 'school_applications', label: 'School applications', table: 'school_applications', icon: '▤' },
+  { key: 'customers', label: 'Customers', table: 'customers', icon: '♙' },
+  { key: 'crm_activities', label: 'Follow-ups', table: 'crm_activities', icon: '◷' },
+  { key: 'events', label: 'Events', table: 'events', icon: '✦' },
+  { key: 'payments', label: 'Payments', table: 'payments', icon: '＄' },
+  { key: 'content_pages', label: 'Pages', table: 'content_pages', icon: '▧' },
+  { key: 'services', label: 'Services', table: 'services', icon: '✧' },
+  { key: 'courses', label: 'Courses', table: 'courses', icon: '♜' },
+  { key: 'menu_items', label: 'Menu', table: 'menu_items', icon: '☷' },
+  { key: 'gallery_items', label: 'Gallery', table: 'gallery_items', icon: '▣' },
+  { key: 'testimonials', label: 'Testimonials', table: 'testimonials', icon: '❞' },
+  { key: 'staff_profiles', label: 'Staff & access', table: 'staff_profiles', icon: '♧' },
+  { key: 'site_settings', label: 'Website settings', table: 'site_settings', icon: '⚙' }
+];
+
+const TITLES = {
+  leads: 'Lead pipeline',
+  catering_bookings: 'Catering bookings',
+  school_applications: 'Cooking school applications',
+  customers: 'Customer directory',
+  crm_activities: 'Follow-up activities',
+  events: 'Events calendar',
+  payments: 'Payments',
+  content_pages: 'Website pages',
+  services: 'Catering services',
+  courses: 'Cooking courses',
+  menu_items: 'Food menu',
+  gallery_items: 'Photo gallery',
+  testimonials: 'Customer testimonials',
+  staff_profiles: 'Staff and role access',
+  site_settings: 'Website settings'
+};
+
+const FIELD_LABELS = {
+  full_name: 'Full name', name: 'Name', phone: 'Phone', email: 'Email',
+  interest: 'Interest', source: 'Source', status: 'Status', notes: 'Notes',
+  title: 'Title', slug: 'URL slug', summary: 'Summary', excerpt: 'Excerpt',
+  event_type: 'Event type', event_date: 'Event date', venue: 'Venue',
+  guests: 'Guests', course: 'Course', intake: 'Intake', amount: 'Amount',
+  currency: 'Currency', payment_method: 'Payment method', reference: 'Reference',
+  activity_type: 'Activity type', subject: 'Subject', details: 'Details',
+  outcome: 'Outcome', next_action_at: 'Next follow-up', starts_at: 'Starts',
+  ends_at: 'Ends', role: 'Role', is_active: 'Active', is_featured: 'Featured',
+  description: 'Description', image_url: 'Image URL', cover_image_url: 'Cover image URL',
+  media_url: 'Media URL', price_label: 'Price label', fee: 'Course fee',
+  duration_label: 'Duration', level: 'Level', quote: 'Testimonial',
+  customer_name: 'Customer name', customer_title: 'Customer title',
+  business_name: 'Business name', tagline: 'Tagline', whatsapp_number: 'WhatsApp number',
+  physical_address: 'Address', email_address: 'Email'
+};
+
+const VISIBLE_FIELDS = {
+  leads: ['full_name', 'phone', 'email', 'interest', 'source', 'status', 'next_follow_up_at'],
+  catering_bookings: ['name', 'phone', 'event_type', 'event_date', 'venue', 'guests', 'status', 'quoted_amount', 'final_amount'],
+  school_applications: ['name', 'phone', 'course', 'intake', 'status'],
+  customers: ['full_name', 'phone', 'email', 'source'],
+  crm_activities: ['activity_type', 'subject', 'details', 'outcome', 'next_action_at'],
+  events: ['title', 'event_type', 'venue', 'starts_at', 'status'],
+  payments: ['amount', 'currency', 'payment_method', 'reference', 'status', 'paid_at'],
+  content_pages: ['title', 'slug', 'excerpt', 'status', 'updated_at'],
+  services: ['title', 'slug', 'summary', 'price_label', 'status'],
+  courses: ['title', 'slug', 'duration_label', 'fee', 'status'],
+  menu_items: ['name', 'price', 'currency', 'is_available', 'status'],
+  gallery_items: ['title', 'category', 'media_type', 'status'],
+  testimonials: ['customer_name', 'quote', 'rating', 'status'],
+  staff_profiles: ['full_name', 'phone', 'role', 'is_active'],
+  site_settings: ['business_name', 'tagline', 'phone', 'whatsapp_number', 'email', 'physical_address']
+};
+
+const STATUS_OPTIONS = {
+  leads: ['new', 'contacted', 'qualified', 'converted', 'lost'],
+  catering_bookings: ['new', 'contacted', 'quoted', 'confirmed', 'completed', 'cancelled'],
+  school_applications: ['new', 'contacted', 'reviewing', 'accepted', 'enrolled', 'rejected'],
+  events: ['planned', 'confirmed', 'completed', 'cancelled'],
+  payments: ['pending', 'paid', 'failed', 'refunded'],
+  content_pages: ['draft', 'published', 'archived'],
+  services: ['draft', 'published', 'archived'],
+  courses: ['draft', 'published', 'archived'],
+  menu_items: ['draft', 'published', 'archived'],
+  gallery_items: ['draft', 'published', 'archived'],
+  testimonials: ['pending', 'published', 'hidden']
+};
+
+const money = (value, currency = 'UGX') => value == null ? '—' : new Intl.NumberFormat('en-UG', { style: 'currency', currency, maximumFractionDigits: 0 }).format(Number(value));
+const date = value => value ? new Date(value).toLocaleString() : '—';
+
+function Metric({ label, value, detail, tone = '' }) {
+  return <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
+    <p className="text-sm font-semibold text-stone-500">{label}</p>
+    <p className={`mt-2 text-3xl font-extrabold ${tone || 'text-ink'}`}>{value}</p>
+    {detail && <p className="mt-1 text-xs text-stone-400">{detail}</p>}
+  </div>;
+}
+
+export default function AdminDashboard({ user, profile, onSignOut }) {
+  const [active, setActive] = useState('overview');
+  const [counts, setCounts] = useState({});
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [notice, setNotice] = useState('');
+  const [search, setSearch] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const module = MODULES.find(item => item.key === active);
+  const role = profile?.role || 'staff';
+
+  async function loadCounts() {
+    const tables = MODULES.filter(item => item.table && item.table !== 'site_settings');
+    const results = await Promise.all(tables.map(async item => {
+      const { count } = await supabase.from(item.table).select('*', { count: 'exact', head: true });
+      return [item.table, count || 0];
+    }));
+    setCounts(Object.fromEntries(results));
+  }
+
+  async function loadRows(table) {
+    setLoading(true);
+    setNotice('');
+    const { data, error } = await supabase.from(table).select('*').order('created_at', { ascending: false }).limit(100);
+    if (error) setNotice(error.message);
+    setRows(data || []);
+    setLoading(false);
+  }
+
+  useEffect(() => { loadCounts(); }, []);
+  useEffect(() => {
+    setSearch('');
+    if (module?.table) loadRows(module.table);
+    else setRows([]);
+  }, [active]);
+
+  const visibleRows = useMemo(() => {
+    const q = search.toLowerCase().trim();
+    if (!q) return rows;
+    return rows.filter(row => Object.values(row).some(value => String(value ?? '').toLowerCase().includes(q)));
+  }, [rows, search]);
+
+  async function updateStatus(row, value) {
+    const { error } = await supabase.from(module.table).update({ status: value }).eq('id', row.id);
+    if (error) setNotice(error.message);
+    else {
+      setRows(current => current.map(item => item.id === row.id ? { ...item, status: value } : item));
+      setNotice('Record updated.');
+      loadCounts();
+    }
+  }
+
+  async function saveNew(event) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const values = Object.fromEntries(form.entries());
+    const { error } = await supabase.from(module.table).insert(values);
+    if (error) setNotice(error.message);
+    else {
+      setNotice('New record saved.');
+      setCreating(false);
+      loadRows(module.table);
+      loadCounts();
+    }
+  }
+
+  const canCreate = ['leads', 'customers', 'crm_activities', 'events', 'content_pages', 'services', 'courses', 'menu_items', 'gallery_items', 'testimonials'].includes(active);
+
+  return <div className="min-h-screen bg-[#f6f5f0] text-ink">
+    <div className="flex min-h-screen">
+      <aside className="hidden w-64 shrink-0 flex-col bg-leaf text-white lg:flex">
+        <div className="border-b border-white/10 px-6 py-6">
+          <div className="text-xs font-bold uppercase tracking-[.22em] text-saffron">Chef Godwin</div>
+          <div className="mt-1 text-xl font-extrabold">Control room</div>
+          <div className="mt-1 text-xs text-white/60">Website + customer operations</div>
+        </div>
+        <nav className="flex-1 space-y-1 overflow-y-auto p-3">
+          {MODULES.map(item => <button key={item.key} onClick={() => { setActive(item.key); setCreating(false); }} className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition ${active === item.key ? 'bg-saffron text-ink' : 'text-white/75 hover:bg-white/10 hover:text-white'}`}>
+            <span className="w-5 text-center text-base">{item.icon}</span><span className="flex-1">{item.label}</span>
+            {item.table && counts[item.table] > 0 && <span className="rounded-full bg-white/15 px-2 py-0.5 text-[10px]">{counts[item.table]}</span>}
+          </button>)}
+        </nav>
+        <div className="border-t border-white/10 p-4">
+          <p className="truncate text-sm font-bold">{profile?.full_name || user.email}</p>
+          <p className="mt-1 text-xs capitalize text-saffron">{role.replaceAll('_', ' ')}</p>
+          <button onClick={onSignOut} className="mt-4 w-full rounded-lg border border-white/20 px-3 py-2 text-sm font-semibold hover:bg-white/10">Sign out</button>
+        </div>
+      </aside>
+
+      <main className="min-w-0 flex-1">
+        <header className="sticky top-0 z-10 flex items-center justify-between border-b border-stone-200 bg-white/95 px-4 py-4 backdrop-blur sm:px-8">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[.18em] text-chili">Chef Godwin management</p>
+            <h1 className="mt-1 text-xl font-extrabold sm:text-2xl">{active === 'overview' ? 'Business overview' : TITLES[active] || module?.label}</h1>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="hidden rounded-full bg-leaf/10 px-3 py-1.5 text-xs font-bold capitalize text-leaf sm:inline-flex">{role.replaceAll('_', ' ')}</span>
+            <button onClick={onSignOut} className="rounded-lg border border-stone-200 px-3 py-2 text-sm font-bold lg:hidden">Exit</button>
+          </div>
+        </header>
+
+        <div className="space-y-6 p-4 sm:p-8">
+          <div className="flex gap-2 overflow-x-auto pb-1 lg:hidden">
+            {MODULES.map(item => <button key={item.key} onClick={() => setActive(item.key)} className={`shrink-0 rounded-full px-3 py-2 text-xs font-bold ${active === item.key ? 'bg-leaf text-white' : 'bg-white text-stone-600'}`}>{item.label}</button>)}
+          </div>
+
+          {notice && <div className="rounded-xl border border-saffron/40 bg-saffron/10 px-4 py-3 text-sm text-ink" role="status">{notice}</div>}
+
+          {active === 'overview' ? <>
+            <div className="rounded-3xl bg-leaf p-6 text-white sm:p-8">
+              <p className="text-sm font-semibold text-saffron">Good to see you, {profile?.full_name || 'Super Administrator'}</p>
+              <h2 className="mt-2 max-w-2xl text-3xl font-extrabold sm:text-4xl">Your kitchen, school and customer relationships in one place.</h2>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-white/70">Manage enquiries, confirm bookings, follow up applicants, track payments and publish website updates from this workspace.</p>
+              <button onClick={() => setActive('leads')} className="mt-6 rounded-lg bg-saffron px-5 py-3 text-sm font-extrabold text-ink">Open lead pipeline →</button>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <Metric label="New leads" value={counts.leads ?? '—'} detail="Enquiries waiting for attention" />
+              <Metric label="Catering bookings" value={counts.catering_bookings ?? '—'} detail="Bookings and event requests" />
+              <Metric label="School applications" value={counts.school_applications ?? '—'} detail="Cooking school applicants" />
+              <Metric label="Customers" value={counts.customers ?? '—'} detail="Customer records" />
+            </div>
+            <div className="grid gap-4 xl:grid-cols-2">
+              <div className="rounded-2xl border border-stone-200 bg-white p-5">
+                <h3 className="font-extrabold">Operations</h3>
+                <div className="mt-4 grid grid-cols-2 gap-3">{['leads','catering_bookings','school_applications','crm_activities','events','payments'].map(key => <button key={key} onClick={() => setActive(key)} className="rounded-xl bg-stone-50 p-3 text-left hover:bg-leaf/10"><span className="block text-xl font-extrabold">{counts[key] ?? 0}</span><span className="text-xs capitalize text-stone-500">{key.replaceAll('_',' ')}</span></button>)}</div>
+              </div>
+              <div className="rounded-2xl border border-stone-200 bg-white p-5">
+                <h3 className="font-extrabold">Website publishing</h3>
+                <p className="mt-2 text-sm text-stone-500">Keep the public website active with current services, courses, menu items, photos and customer stories.</p>
+                <div className="mt-4 flex flex-wrap gap-2">{['content_pages','services','courses','menu_items','gallery_items','testimonials'].map(key => <button key={key} onClick={() => setActive(key)} className="rounded-full border border-stone-200 px-3 py-2 text-xs font-bold hover:border-leaf hover:text-leaf">{MODULES.find(m=>m.key===key).label}</button>)}</div>
+              </div>
+            </div>
+          </> : module?.table ? <>
+            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+              <div><p className="text-sm text-stone-500">Showing up to 100 recent records. Your assigned role controls what you can access.</p></div>
+              <div className="flex gap-2">
+                <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search records..." className="min-w-0 rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm outline-none focus:border-leaf" />
+                <button onClick={() => loadRows(module.table)} className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm font-bold">Refresh</button>
+                {canCreate && <button onClick={() => setCreating(v=>!v)} className="rounded-lg bg-chili px-4 py-2 text-sm font-bold text-white">+ Add new</button>}
+              </div>
+            </div>
+
+            {creating && <form onSubmit={saveNew} className="grid gap-3 rounded-2xl border border-stone-200 bg-white p-5 sm:grid-cols-2">
+              <h3 className="font-extrabold sm:col-span-2">Create {module.label.toLowerCase()}</h3>
+              {(active === 'leads' ? ['full_name','phone','email','interest','source','status','notes'] :
+                active === 'customers' ? ['full_name','phone','email','source','notes'] :
+                active === 'events' ? ['title','event_type','description','venue','starts_at','ends_at','status'] :
+                active === 'crm_activities' ? ['activity_type','subject','details','outcome','next_action_at'] :
+                active === 'content_pages' ? ['title','slug','excerpt','seo_title','seo_description','status'] :
+                active === 'services' ? ['title','slug','summary','price_label','image_url','status'] :
+                active === 'courses' ? ['title','slug','summary','duration_label','level','fee','status'] :
+                active === 'menu_items' ? ['name','description','price','currency','image_url','status'] :
+                active === 'gallery_items' ? ['title','description','media_url','media_type','category','alt_text','status'] :
+                ['customer_name','customer_title','quote','rating','status']).map(field => <label key={field} className="grid gap-1 text-xs font-bold text-stone-600">{FIELD_LABELS[field] || field}<input name={field} required={['title','slug','full_name','name','phone','interest','quote','customer_name','media_url'].includes(field)} type={field.includes('date') || field.endsWith('_at') ? 'datetime-local' : field === 'fee' || field === 'rating' || field === 'price' ? 'number' : 'text'} defaultValue={field === 'status' ? (STATUS_OPTIONS[active]?.[0] || 'new') : field === 'currency' ? 'UGX' : ''} className="rounded-lg border border-stone-200 px-3 py-2 text-sm font-normal" /></label>)}
+              <div className="flex gap-2 sm:col-span-2"><button disabled={saving} className="rounded-lg bg-leaf px-4 py-2 text-sm font-bold text-white">Save record</button><button type="button" onClick={()=>setCreating(false)} className="rounded-lg border border-stone-200 px-4 py-2 text-sm font-bold">Cancel</button></div>
+            </form>}
+
+            <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white">
+              {loading ? <p className="p-8 text-center text-sm text-stone-500">Loading records…</p> : visibleRows.length === 0 ? <div className="p-10 text-center"><div className="text-3xl">⌁</div><p className="mt-2 font-bold">Nothing here yet</p><p className="mt-1 text-sm text-stone-500">New website enquiries and records will appear here.</p></div> :
+                <div className="overflow-x-auto"><table className="w-full min-w-[680px] text-left text-sm">
+                  <thead className="bg-stone-50 text-xs uppercase tracking-wide text-stone-500"><tr>{(VISIBLE_FIELDS[active] || Object.keys(visibleRows[0]).slice(0,6)).map(field=><th key={field} className="px-4 py-3 font-bold">{FIELD_LABELS[field] || field.replaceAll('_',' ')}</th>)}<th className="px-4 py-3">Manage</th></tr></thead>
+                  <tbody className="divide-y divide-stone-100">{visibleRows.map(row=><tr key={row.id} className="hover:bg-stone-50/70">{(VISIBLE_FIELDS[active] || Object.keys(row).slice(0,6)).map(field=><td key={field} className="max-w-[240px] px-4 py-3 text-stone-700">{field === 'status' ? <span className="rounded-full bg-saffron/15 px-2.5 py-1 text-xs font-bold capitalize">{row[field]}</span> : field === 'amount' || field === 'fee' || field === 'price' || field === 'quoted_amount' || field === 'final_amount' ? money(row[field],row.currency || 'UGX') : field.endsWith('_at') || field.endsWith('_date') || field === 'created_at' || field === 'updated_at' ? date(row[field]) : field === 'is_active' || field === 'is_available' ? (row[field] ? 'Yes' : 'No') : <span className="block truncate">{row[field] ?? '—'}</span>}</td>)}<td className="px-4 py-3">{STATUS_OPTIONS[active] && <select aria-label="Change status" value={row.status || ''} onChange={e=>updateStatus(row,e.target.value)} className="rounded-lg border border-stone-200 bg-white px-2 py-1.5 text-xs"><option value="">Status</option>{STATUS_OPTIONS[active].map(value=><option key={value} value={value}>{value}</option>)}</select>}</td></tr>)}</tbody>
+                </table></div>}
+            </div>
+          </> : null}
+        </div>
+      </main>
+    </div>
+  </div>;
+}
