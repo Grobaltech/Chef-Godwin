@@ -7,6 +7,7 @@ const FIELDS = {
     { name: 'name', label: 'Your name', required: true },
     { name: 'phone', label: 'Phone or WhatsApp number', type: 'tel', required: true },
     { name: 'email', label: 'Email address', type: 'email' },
+    { name: 'email', label: 'Email address', type: 'email' },
     { name: 'event_type', label: 'Event type', type: 'select', options: EVENT_TYPES, required: true },
     { name: 'event_date', label: 'Event date', type: 'date' },
     { name: 'venue', label: 'Venue or area' },
