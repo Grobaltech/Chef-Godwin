@@ -4,11 +4,11 @@
 const TABLES = {
   catering: {
     table: "catering_bookings",
-    fields: ["name", "phone", "event_type", "event_date", "venue", "guests", "message"],
+    fields: ["name", "phone", "email", "event_type", "event_date", "venue", "guests", "message"],
   },
   school: {
     table: "school_applications",
-    fields: ["name", "phone", "course", "intake", "message"],
+    fields: ["name", "phone", "email", "course", "intake", "message"],
   },
 };
 
