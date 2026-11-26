@@ -139,13 +139,14 @@ function PublicSite({ onAdmin }) {
   </>;
 }
 
-export default function App(){
+export default function App({startupError=''}) {
+  if (startupError) return <main className="flex min-h-screen items-center justify-center bg-cream px-4"><div className="max-w-lg rounded-2xl bg-white p-8 shadow"><h1 className="text-2xl font-extrabold text-leaf">Chef Godwin could not connect</h1><p className="mt-3 text-sm leading-6 text-stone-600">{startupError}</p><p className="mt-3 text-xs text-stone-500">The browser only receives the Supabase URL and publishable key. The private service-role key is never sent to the browser.</p><button onClick={()=>window.location.reload()} className="mt-6 rounded-lg bg-chili px-4 py-2 font-bold text-white">Try again</button></div></main>;
   const [session,setSession]=useState(null),[profile,setProfile]=useState(null),[authLoading,setAuthLoading]=useState(true),[showLogin,setShowLogin]=useState(window.location.pathname.startsWith('/admin')||window.location.pathname.startsWith('/login')),[profileError,setProfileError]=useState('');
   useEffect(()=>{
     new WOW({live:false,animateClass:'animate__animated'}).init();
     if(!supabase){setAuthLoading(false);return}
     let alive=true;
-    supabase.auth.getSession().then(({data})=>{if(alive)setSession(data.session);setAuthLoading(false)});
+    supabase.auth.getSession().then(({data,error})=>{if(!alive)return;if(error)setProfileError(error.message);setSession(data?.session||null)}).catch(error=>{if(alive)setProfileError(error instanceof Error?error.message:'Could not restore your staff session.')}).finally(()=>{if(alive)setAuthLoading(false)});
     const {data:listener}=supabase.auth.onAuthStateChange((_event,next)=>{setSession(next);if(!next)setProfile(null)});
     return()=>{alive=false;listener.subscription.unsubscribe()}
   },[]);
@@ -153,6 +154,7 @@ export default function App(){
     let alive=true;
     async function getProfile(){
       if(!session?.user){setProfile(null);setProfileError('');return}
+      if(!supabase){setProfileError('Supabase is not configured.');return}
       const {data,error}=await supabase.from('staff_profiles').select('id,full_name,role,is_active').eq('id',session.user.id).maybeSingle();
       if(!alive)return;
       if(error)setProfileError(error.message);
