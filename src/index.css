@@ -2,14 +2,21 @@
 @tailwind components;
 @tailwind utilities;
 
-:root { color-scheme: light; }
+:root {
+  color-scheme: light;
+  --brand-forest: #0B3B2E;
+  --brand-gold: #D8A52B;
+  --brand-red: #A52A2A;
+  --brand-cream: #FFF9E8;
+  --brand-ink: #211F18;
+}
 
 html { scroll-behavior: smooth; scroll-padding-top: 4.5rem; }
 
 body {
   margin: 0;
-  background: #F6F6F1;
-  color: #262522;
+  background: var(--brand-cream);
+  color: var(--brand-ink);
   font-family: 'Source Sans 3', system-ui, sans-serif;
   padding-bottom: env(safe-area-inset-bottom, 0px);
   -webkit-tap-highlight-color: transparent;
@@ -17,7 +24,12 @@ body {
 
 h1, h2, h3 { font-family: 'Bricolage Grotesque', system-ui, sans-serif; }
 
-:focus-visible { outline: 3px solid #E3A41B; outline-offset: 2px; }
+::selection { background: var(--brand-gold); color: var(--brand-forest); }
+
+:focus-visible {
+  outline: 3px solid var(--brand-gold);
+  outline-offset: 2px;
+}
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
