@@ -12,11 +12,14 @@ export default function App() {
   return (
     <>
       <header
-        className="sticky top-0 z-20 bg-leaf text-white"
+        className="sticky top-0 z-20 bg-leaf text-white shadow-md"
         style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
       >
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-          <a href="#top" className="font-display text-lg font-bold">{BRAND.short}</a>
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-2">
+          <a href="#top" className="flex items-center gap-3" aria-label="Chef Godwin home">
+            <img src="/logo.jpg" alt="Chef Godwin emblem" className="h-12 w-10 rounded-sm object-contain" />
+            <span className="font-display text-lg font-extrabold tracking-wide">Chef Godwin</span>
+          </a>
           <nav className="flex gap-4 text-sm font-semibold">
             <a href="#catering">Catering</a>
             <a href="#school">School</a>
@@ -26,7 +29,6 @@ export default function App() {
       </header>
 
       <main id="top">
-        {/* Hero: one orchestrated entrance, nothing else on the page auto-animates beyond headings */}
         <section className="bg-leaf text-white">
           <div className="mx-auto max-w-5xl px-4 pb-16 pt-14 sm:pt-20">
             <p className="animate__animated animate__fadeIn text-saffron font-semibold">{BRAND.tagline}</p>
