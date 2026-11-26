@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color-scheme: light; }
+
+html { scroll-behavior: smooth; scroll-padding-top: 4.5rem; }
+
+body {
+  margin: 0;
+  background: #F6F6F1;
+  color: #262522;
+  font-family: 'Source Sans 3', system-ui, sans-serif;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  -webkit-tap-highlight-color: transparent;
+}
+
+h1, h2, h3 { font-family: 'Bricolage Grotesque', system-ui, sans-serif; }
+
+:focus-visible { outline: 3px solid #E3A41B; outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
