@@ -106,20 +106,20 @@ async function handleStaffInvite(request, env) {
   if (request.method !== "POST") return json({ error: "Method not allowed." }, 405);
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_KEY) return json({ error: "Staff invitation is not configured." }, 503);
 
-  const token = (request.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
+  const authorization = request.headers.get("Authorization") || "";
+  const token = authorization.toLowerCase().startsWith("bearer ") ? authorization.slice(7).trim() : "";
   if (!token) return json({ error: "Sign in as the Super Administrator first." }, 401);
-
-  const base = env.SUPABASE_URL.replace(/\/$/, "");
-  const headers = { apikey: env.SUPABASE_SERVICE_KEY, Authorization: "Bearer " + env.SUPABASE_SERVICE_KEY };
+  const base = env.SUPABASE_URL.endsWith("/") ? env.SUPABASE_URL.slice(0, -1) : env.SUPABASE_URL;
+  const serviceHeaders = { apikey: env.SUPABASE_SERVICE_KEY, Authorization: "Bearer " + env.SUPABASE_SERVICE_KEY };
   const authResponse = await fetch(base + "/auth/v1/user", {
     headers: { apikey: env.SUPABASE_SERVICE_KEY, Authorization: "Bearer " + token }
   });
   if (!authResponse.ok) return json({ error: "Your session is invalid. Please sign in again." }, 401);
   const authUser = await authResponse.json();
 
-  const profileResponse = await fetch(base + "/rest/v1/staff_profiles?id=eq." + encodeURIComponent(authUser.id) + "&select=role,is_active", { headers });
+  const profileResponse = await fetch(base + "/rest/v1/staff_profiles?id=eq." + encodeURIComponent(authUser.id) + "&select=role,is_active", { headers: serviceHeaders });
   const profiles = await profileResponse.json();
-  if (!profileResponse.ok || !profiles?.[0] || profiles[0].role !== "owner" || profiles[0].is_active !== true) {
+  if (!profileResponse.ok || !profiles || !profiles[0] || profiles[0].role !== "owner" || profiles[0].is_active !== true) {
     return json({ error: "Only the Super Administrator can invite staff." }, 403);
   }
 
@@ -130,13 +130,13 @@ async function handleStaffInvite(request, env) {
   const phone = String(payload.phone || "").trim().slice(0, 40);
   const role = String(payload.role || "");
   const allowedRoles = ["admin", "manager", "content_editor", "chef", "events", "admissions", "finance", "receptionist"];
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !fullName || !allowedRoles.includes(role)) {
+  if (!email || !email.includes("@") || !email.split("@")[1].includes(".") || !fullName || !allowedRoles.includes(role)) {
     return json({ error: "Enter a valid email, full name and permitted staff role." }, 400);
   }
 
   const inviteResponse = await fetch(base + "/auth/v1/invite?redirect_to=" + encodeURIComponent(new URL("/login", request.url).toString()), {
     method: "POST",
-    headers: { ...headers, "Content-Type": "application/json" },
+    headers: { ...serviceHeaders, "Content-Type": "application/json" },
     body: JSON.stringify({ email, data: { full_name: fullName } })
   });
   const invited = await inviteResponse.json().catch(() => ({}));
@@ -144,24 +144,22 @@ async function handleStaffInvite(request, env) {
     return json({ error: invited.msg || invited.message || invited.error_description || "Could not send the invitation. Check whether this email already has an account." }, 400);
   }
 
-  const profileResponseWrite = await fetch(base + "/rest/v1/staff_profiles", {
+  const profileWrite = await fetch(base + "/rest/v1/staff_profiles", {
     method: "POST",
-    headers: { ...headers, "Content-Type": "application/json", Prefer: "return=minimal" },
+    headers: { ...serviceHeaders, "Content-Type": "application/json", Prefer: "return=minimal" },
     body: JSON.stringify({ id: invited.id, full_name: fullName, phone: phone || null, role, is_active: true })
   });
-  if (!profileResponseWrite.ok) {
+  if (!profileWrite.ok) {
     return json({ error: "The invitation was sent, but the staff profile could not be created. Contact the administrator before inviting this email again." }, 502);
   }
   return json({ ok: true, message: "Invitation sent to " + email + ". The staff member must accept the email invitation to activate their login." });
 }
-\nexport default {
+
+export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-
-    if (url.pathname === "/api/lead") {
-      return handleLead(request, env);
-    }
-
-    if (url.pathname === "/api/staff/invite") {\n      return handleStaffInvite(request, env);\n    }\n\n    return env.ASSETS.fetch(request);
+    if (url.pathname === "/api/lead") return handleLead(request, env);
+    if (url.pathname === "/api/staff/invite") return handleStaffInvite(request, env);
+    return env.ASSETS.fetch(request);
   },
-};
+}
