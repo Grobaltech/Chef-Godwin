@@ -31,7 +31,7 @@ const COPY = {
 const inputClass =
   'w-full rounded-md border border-ink/25 bg-white px-3 py-2.5 text-base focus:border-leaf focus:outline-none';
 
-export default function LeadForm({ kind }) {
+export default function LeadForm({ kind, courses = [], eventTypes = [] }) {
   const [status, setStatus] = useState('idle'); // idle | sending | done | error
   const [error, setError] = useState('');
   const [token, setToken] = useState('');
@@ -94,7 +94,7 @@ export default function LeadForm({ kind }) {
           ) : f.type === 'select' ? (
             <select name={f.name} required={f.required} defaultValue="" className={inputClass}>
               <option value="" disabled>Choose one</option>
-              {f.options.map((o) => <option key={o} value={o}>{o}</option>)}
+              {(f.name === 'course' && courses.length ? courses.map(item => typeof item === 'string' ? item : item.title) : f.name === 'event_type' && eventTypes.length ? eventTypes : f.options).map((o) => <option key={o} value={o}>{o}</option>)}
             </select>
           ) : (
             <input
