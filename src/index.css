@@ -9,3 +9,16 @@ h1,h2,h3{font-family:'Bricolage Grotesque',system-ui,sans-serif}
 :focus-visible{outline:3px solid var(--brand-gold);outline-offset:2px}
 button,a,input,select,textarea{-webkit-tap-highlight-color:transparent}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+/* Homepage Swiper hero controls */
+.chef-hero-swiper .swiper-button-prev,
+.chef-hero-swiper .swiper-button-next{color:#fff;background:rgba(11,59,46,.55);width:42px;height:42px;border-radius:9999px;backdrop-filter:blur(8px)}
+.chef-hero-swiper .swiper-button-prev:after,
+.chef-hero-swiper .swiper-button-next:after{font-size:15px;font-weight:800}
+.chef-hero-swiper .swiper-pagination{bottom:24px!important;text-align:left;padding-left:max(24px,calc((100vw - 1152px)/2 + 24px))}
+.chef-hero-swiper .swiper-pagination-bullet{width:9px;height:9px;background:#fff;opacity:.55}
+.chef-hero-swiper .swiper-pagination-bullet-active{width:26px;border-radius:9999px;background:var(--brand-gold);opacity:1}
+@media(max-width:640px){
+  .chef-hero-swiper .swiper-button-prev,.chef-hero-swiper .swiper-button-next{display:none}
+  .chef-hero-swiper .swiper-pagination{padding-left:24px}
+}
