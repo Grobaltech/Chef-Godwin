@@ -130,7 +130,7 @@ async function handleStaffInvite(request, env) {
   const phone = String(payload.phone || "").trim().slice(0, 40);
   const role = String(payload.role || "");
   const allowedRoles = ["admin", "manager", "content_editor", "chef", "events", "admissions", "finance", "receptionist"];
-  if (!email || !/^[^\s@]+@[^\s@]+\\.[^\s@]+$/.test(email) || !fullName || !allowedRoles.includes(role)) {
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !fullName || !allowedRoles.includes(role)) {
     return json({ error: "Enter a valid email, full name and permitted staff role." }, 400);
   }
 
