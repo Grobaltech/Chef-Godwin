@@ -71,10 +71,10 @@ function PublicSite({ onAdmin }) {
   const shownServices=services.length?services:EVENT_TYPES.map(title=>({id:title,title,summary:'Made with care for your special gathering.'}));
   const shownCourses=courses.length?courses:COURSES.map(title=>({id:title,title,summary:'Practical, hands-on cooking lessons.'}));
   const heroSlides=[
+    {image:'/images/chef-godwin-hero.webp',title:'Food made for moments that matter.',description:'Restaurant, bakery, catering and practical culinary learning — all brought together with care.',alt:'Original AI-generated Chef Godwin food photography'},
     ...gallery.filter(item=>item.media_type!=='video'&&item.media_url).map(item=>({image:item.media_url,title:item.title||'Food made for moments that matter.',description:item.description||'Thoughtful catering and practical culinary training.',alt:item.alt_text||item.title||'Chef Godwin food'})),
     ...menu.filter(item=>item.image_url).map(item=>({image:item.image_url,title:item.name||'From our kitchen',description:item.description||'Freshly prepared with care.',alt:item.name||'Chef Godwin menu'}))
   ].slice(0,6);
-  if(!heroSlides.length)heroSlides.push({image:'/hero-food.jpg',title:'Food made for moments that matter.',description:'Thoughtful catering for celebrations, alongside practical cooking lessons for the next generation of great cooks.',alt:'Chef Godwin prepared food'});
 
   return <>
     <header className="sticky top-0 z-20 bg-leaf text-white shadow-md" style={{paddingTop:'env(safe-area-inset-top, 0px)'}}><div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
