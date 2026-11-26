@@ -152,6 +152,7 @@ export default function AdminDashboard({ user, profile, onSignOut }) {
   useEffect(() => { loadCounts(); }, []);
   useEffect(() => {
     setSearch('');
+    setEditingRow(null);
     if (module?.table) loadRows(module.table);
     else setRows([]);
   }, [active]);
@@ -341,7 +342,7 @@ export default function AdminDashboard({ user, profile, onSignOut }) {
                 active === 'courses' ? ['title','slug','summary','duration_label','level','fee','status'] :
                 active === 'menu_items' ? ['name','description','price','currency','image_url','status'] :
                 active === 'gallery_items' ? ['title','description','media_url','media_type','category','alt_text','sort_order','status'] :
-                ['customer_name','customer_title','quote','rating','status']).map(field => <label key={field} className="grid gap-1 text-xs font-bold text-stone-600">{FIELD_LABELS[field] || field}<input name={field} required={['title','slug','full_name','name','phone','interest','quote','customer_name','media_url'].includes(field)} type={field.includes('date') || field.endsWith('_at') ? 'datetime-local' : field === 'fee' || field === 'rating' || field === 'price' || field === 'sort_order' ? 'number' : 'text'} defaultValue={field === 'status' ? (STATUS_OPTIONS[active]?.[0] || 'new') : field === 'currency' ? 'UGX' : ''} className="rounded-lg border border-stone-200 px-3 py-2 text-sm font-normal" /></label>)}
+                ['customer_name','customer_title','quote','rating','status']).map(field => <label key={field} className="grid gap-1 text-xs font-bold text-stone-600">{FIELD_LABELS[field] || field}<input name={field} required={['title','slug','full_name','name','phone','interest','quote','customer_name','media_url'].includes(field)} type={field.includes('date') || field.endsWith('_at') ? 'datetime-local' : field === 'fee' || field === 'rating' || field === 'price' || field === 'sort_order' ? 'number' : 'text'} defaultValue={field === 'status' ? (STATUS_OPTIONS[active]?.[0] || 'new') : field === 'currency' ? 'UGX' : field === 'sort_order' ? '0' : ''} className="rounded-lg border border-stone-200 px-3 py-2 text-sm font-normal" /></label>)}
               <div className="flex gap-2 sm:col-span-2"><button disabled={saving} className="rounded-lg bg-leaf px-4 py-2 text-sm font-bold text-white">Save record</button><button type="button" onClick={()=>setCreating(false)} className="rounded-lg border border-stone-200 px-4 py-2 text-sm font-bold">Cancel</button></div>
             </form>}
 
