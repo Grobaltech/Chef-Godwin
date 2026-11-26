@@ -1,0 +1,6 @@
+name = "chef-godwin-uganda"
+pages_build_output_dir = "dist"
+compatibility_date = "2024-11-01"
+
+# Configure these as Cloudflare Pages secrets:
+# SUPABASE_URL, SUPABASE_SERVICE_KEY, TURNSTILE_SECRET
