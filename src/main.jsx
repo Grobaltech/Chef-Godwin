@@ -9,7 +9,10 @@ async function startApplication() {
   try {
     await configureSupabase();
   } catch (error) {
+    // Keep the public website available even when staff auth configuration
+    // needs attention. Login itself will explain that sign-in is unavailable.
     startupError = error instanceof Error ? error.message : 'Could not load the application configuration.';
+    console.error('Chef Godwin startup configuration:', startupError);
   }
 
   createRoot(document.getElementById('root')).render(
