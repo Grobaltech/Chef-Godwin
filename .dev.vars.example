@@ -1,0 +1,4 @@
+# Copy to .dev.vars for local `wrangler pages dev`
+SUPABASE_URL=
+SUPABASE_SERVICE_KEY=
+TURNSTILE_SECRET=
