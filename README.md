@@ -1,13 +1,10 @@
 # Chef Godwin Uganda
 
-Website, PWA and Android app for Chef Godwin's catering and cooking school.
+The Chef Godwin public website, PWA and Android app, connected to a live Supabase-powered customer management workspace.
 
-Stack: React + Tailwind, Animate.css + WOW.js, Vite PWA, Cloudflare Pages + Pages Functions, Cloudflare Turnstile, Supabase (Postgres), Capacitor (Android APK).
+**Stack:** React 18, Vite, Tailwind CSS, Animate.css + WOW.js, Supabase Auth/Postgres, Cloudflare Worker + static assets, Cloudflare Turnstile and Capacitor Android.
 
-Brand palette: forest green (#0B3B2E), warm gold (#D8A52B), deep red (#A52A2A), and cream (#FFF9E8).
-The supplied emblem is stored at `public/logo.jpg` and used in the website header and PWA icon.
-
-## 1. Run locally
+## Run locally
 
 ```bash
 npm install
@@ -15,72 +12,80 @@ cp .env.example .env
 npm run dev
 ```
 
-The lead forms submit to the same-origin `/api/lead` Cloudflare Pages Function. For local API testing, configure `.dev.vars` from `.dev.vars.example` and run:
+The public catering and cooking-school forms submit to `POST /api/lead`. Local Worker API testing can use Wrangler:
 
 ```bash
 npm run build
-npx wrangler pages dev dist
+npx wrangler dev
 ```
 
-## 2. Supabase
+## Live Supabase project
 
-1. Create a Supabase project and run `supabase/schema.sql` in its SQL Editor.
-2. Copy the project URL and service-role key. Keep the service-role key secret.
-3. Create the administrator accounts and add their user IDs to the `admins` table as required by the schema.
+The application is connected to the existing Chef Godwin Supabase project. **Do not run the old `supabase/schema.sql` setup instructions or create a separate `admins` table.** The live database already contains the website content, bookings, applications, customers, CRM activities, events, payments and staff-profile tables, with row-level security enabled.
 
-## 3. Deploy directly from the Cloudflare dashboard — no API token
+Staff authentication is invitation-only:
+- The existing Super Administrator account is the root `owner`.
+- Staff are invited from **Staff & access** inside the management workspace.
+- Available staff roles are Administrator, Manager, Content editor, Chef, Events, Admissions, Finance and Receptionist.
+- Role permissions are enforced by Supabase RLS policies. The service-role key is only used inside the Cloudflare Worker and must never be added to frontend variables.
 
-Use **Cloudflare Dashboard → Workers & Pages → Create application → Pages → Connect to Git** and select this GitHub repository.
+## Cloudflare deployment
 
-Set the Pages build configuration:
-
-- Framework preset: **Vite** (or None)
+Deploy through the Cloudflare dashboard's Git-connected Workers & Pages build. The repository is configured with:
 - Build command: `npm run build`
 - Build output directory: `dist`
-- Production branch: `main`
+- Worker entry point: `src/worker.js`
+- Static assets directory/binding: `dist` / `ASSETS`
 
-Cloudflare's Git integration handles deployment authentication through the dashboard connection. Do not add a Wrangler deployment command, Cloudflare API token, or account ID to GitHub Actions. Pages builds and publishes the site directly from the connected repository.
+The Worker handles `POST /api/lead` and the owner-only `POST /api/staff/invite`. Keep the Worker entry point and assets binding in `wrangler.toml`. Do not add a Wrangler deploy command, API token or account ID to GitHub Actions for dashboard-managed deployment.
 
-The `wrangler.toml` file identifies this as a Pages project. The `functions/api/lead.js` file is intentionally retained: Cloudflare Pages deploys it as the `POST /api/lead` endpoint alongside the static website.
+### Frontend build variables
 
-### Cloudflare Pages environment variables and secrets
+Set these as **build-time variables** in the Cloudflare build environment, for both Production and Preview if you use Preview deployments:
 
-In **Workers & Pages → your Pages project → Settings → Variables and Secrets**, configure:
+- `VITE_SUPABASE_URL=https://tkhavvmijmwajtcyqklm.supabase.co`
+- `VITE_SUPABASE_PUBLISHABLE_KEY` = the project's active publishable key
+- `VITE_WHATSAPP_NUMBER` = international digits, for example `2567XXXXXXXX`
+- `VITE_TURNSTILE_SITE_KEY` = the public Turnstile site key, if enabled
+- `VITE_API_BASE` = leave empty for the live website so API requests use the same origin
 
-Build-time variables:
-- `VITE_TURNSTILE_SITE_KEY`
-- `VITE_WHATSAPP_NUMBER` (international digits, e.g. `2567XXXXXXXX`)
+The publishable key is designed for browser use. Never use a Supabase secret/service-role key as a `VITE_*` variable.
 
-Function secrets:
-- `SUPABASE_URL`
-- `SUPABASE_SERVICE_KEY` (service-role key; secret)
-- `TURNSTILE_SECRET` (secret)
+### Worker runtime variables and secrets
 
-Leave `VITE_API_BASE` empty for the live website so the forms use the same-origin `/api/lead` endpoint.
+Set these in the Worker runtime environment:
 
-Add the custom domain `chefgodwinuganda.com` in the Pages project's Custom domains settings.
+- `SUPABASE_URL` = the Supabase project URL
+- `SUPABASE_SERVICE_KEY` = the Supabase service-role/secret key (**secret**)
+- `TURNSTILE_SECRET` = the private Turnstile secret, if enabled
 
-## 4. Android APK
+Keep the service key secret. It is required by the Worker to save public enquiries and securely invite staff after verifying that the caller is the active Super Administrator.
+
+## Management workspace
+
+Open `/login` or `/admin` to access the staff login. The dashboard includes:
+- Enquiry pipeline, catering bookings and cooking-school applications
+- Customers, follow-up activities and events
+- Payments
+- Website pages, services, courses, menu, gallery and testimonials
+- Staff profiles, role assignment and suspension controls
+- Website settings
+
+Public website sections read published services, courses, menu items and testimonials from Supabase. New public enquiries are stored in the relevant booking/application records.
+
+## Android APK
 
 The APK wraps the built site with Capacitor.
 
-- In GitHub: Actions → **Build Android APK** → Run workflow. Download the generated APK artifact.
-- Locally (needs JDK 17 and Android Studio):
+```bash
+npm run cap:add
+npm run apk:debug
+```
 
-  ```bash
-  npm run cap:add      # first time only, creates android/
-  npm run apk:debug    # output: android/app/build/outputs/apk/debug/app-debug.apk
-  ```
+A local Android build requires JDK 17 and Android Studio. Keep signing keystores out of Git. Configure `VITE_API_BASE` to the live Worker/site origin when building an APK that must submit forms to the hosted API.
 
-Debug APKs install directly on phones. For Google Play you need a signed release build (keystore + `npm run apk:release`). Keep the keystore out of Git.
+## Brand and content
 
-App id is `com.chefgodwin.uganda` in `capacitor.config.json`. Change it before publishing, because it cannot change later.
-
-## 5. Replace placeholders
-
-- `src/config.js`: WhatsApp number, course list, event types, tagline
-- Add Chef Godwin's photos and TikTok/YouTube links
-
-## Next
-
-Admin dashboard (Supabase Auth), courses and menu loaded from Supabase, photo gallery on R2.
+- `src/config.js` contains fallback brand details, WhatsApp number, event types and course labels.
+- Published website content is managed from the staff workspace and stored in Supabase.
+- Add the approved Chef Godwin photos to `public/` and manage public-facing image URLs through the content records.
