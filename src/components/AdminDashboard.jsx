@@ -123,7 +123,12 @@ export default function AdminDashboard({ user, profile, onSignOut }) {
   async function loadRows(table) {
     setLoading(true);
     setNotice('');
-    const { data, error } = await supabase.from(table).select('*').order('created_at', { ascending: false }).limit(100);
+    const query = supabase.from(table).select('*');
+    const result = table === 'site_settings'
+      ? await query.eq('id', true).maybeSingle()
+      : await query.order('created_at', { ascending: false }).limit(100);
+    const data = table === 'site_settings' ? (result.data ? [result.data] : []) : result.data;
+    const error = result.error;
     if (error) setNotice(error.message);
     setRows(data || []);
     setLoading(false);
