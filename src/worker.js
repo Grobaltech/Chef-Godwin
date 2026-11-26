@@ -106,10 +106,10 @@ async function handleStaffInvite(request, env) {
   if (request.method !== "POST") return json({ error: "Method not allowed." }, 405);
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_KEY) return json({ error: "Staff invitation is not configured." }, 503);
 
-  const token = (request.headers.get("Authorization") || "").replace(/^Bearer\\s+/i, "");
+  const token = (request.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
   if (!token) return json({ error: "Sign in as the Super Administrator first." }, 401);
 
-  const base = env.SUPABASE_URL.replace(/\\/$/, "");
+  const base = env.SUPABASE_URL.replace(/\/$/, "");
   const headers = { apikey: env.SUPABASE_SERVICE_KEY, Authorization: "Bearer " + env.SUPABASE_SERVICE_KEY };
   const authResponse = await fetch(base + "/auth/v1/user", {
     headers: { apikey: env.SUPABASE_SERVICE_KEY, Authorization: "Bearer " + token }
@@ -130,14 +130,14 @@ async function handleStaffInvite(request, env) {
   const phone = String(payload.phone || "").trim().slice(0, 40);
   const role = String(payload.role || "");
   const allowedRoles = ["admin", "manager", "content_editor", "chef", "events", "admissions", "finance", "receptionist"];
-  if (!email || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) || !fullName || !allowedRoles.includes(role)) {
+  if (!email || !/^[^\s@]+@[^\s@]+\\.[^\s@]+$/.test(email) || !fullName || !allowedRoles.includes(role)) {
     return json({ error: "Enter a valid email, full name and permitted staff role." }, 400);
   }
 
-  const inviteResponse = await fetch(base + "/auth/v1/invite", {
+  const inviteResponse = await fetch(base + "/auth/v1/invite?redirect_to=" + encodeURIComponent(new URL("/login", request.url).toString()), {
     method: "POST",
     headers: { ...headers, "Content-Type": "application/json" },
-    body: JSON.stringify({ email, data: { full_name: fullName }, redirect_to: new URL("/login", request.url).toString() })
+    body: JSON.stringify({ email, data: { full_name: fullName } })
   });
   const invited = await inviteResponse.json().catch(() => ({}));
   if (!inviteResponse.ok || !invited.id) {
@@ -162,6 +162,6 @@ async function handleStaffInvite(request, env) {
       return handleLead(request, env);
     }
 
-    return env.ASSETS.fetch(request);
+    if (url.pathname === "/api/staff/invite") {\n      return handleStaffInvite(request, env);\n    }\n\n    return env.ASSETS.fetch(request);
   },
 };
