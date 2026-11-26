@@ -328,7 +328,7 @@ export default function AdminDashboard({ user, profile, onSignOut }) {
           </div>
 
           {notice && <div className="rounded-xl border border-saffron/40 bg-saffron/10 px-4 py-3 text-sm text-ink" role="status">{notice}</div>}
-          {active === 'gallery_items' && <div className="rounded-2xl border border-leaf/15 bg-white p-4 sm:p-5"><p className="font-extrabold text-leaf">Homepage hero photography</p><p className="mt-1 text-sm leading-6 text-stone-600">The original Chef Godwin hero photograph appears first. Published images added here and photos attached to published menu items can then rotate in the homepage slider. Use Display order to arrange gallery photos; videos remain in the gallery and are excluded from the hero.</p></div>}
+          {active === 'gallery_items' && <div className="rounded-2xl border border-leaf/15 bg-white p-4 sm:p-5"><p className="font-extrabold text-leaf">Homepage hero photography</p><p className="mt-1 text-sm leading-6 text-stone-600">The original Chef Godwin hero photograph appears first. Published images added here and photos attached to published menu items can then rotate in the homepage slider. Upload the original photo (up to 25 MB) to keep its full quality; it is stored unchanged. Use Display order to arrange gallery photos; videos remain in the gallery and are excluded from the hero.</p></div>}
 
           {active === 'overview' ? <>
             <div className="rounded-3xl bg-leaf p-6 text-white sm:p-8">
