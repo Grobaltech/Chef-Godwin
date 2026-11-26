@@ -158,6 +158,21 @@ async function handleStaffInvite(request, env) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    if (url.pathname === "/api/config") {
+      if (request.method !== "GET") return json({ error: "Method not allowed." }, 405);
+      // Only return browser-safe Supabase settings. Never expose SUPABASE_SERVICE_KEY.
+      const supabaseUrl = env.VITE_SUPABASE_URL || env.SUPABASE_URL || "";
+      const publishableKey = env.VITE_SUPABASE_PUBLISHABLE_KEY || env.SUPABASE_PUBLISHABLE_KEY || env.SUPABASE_ANON_KEY || "";
+      if (!supabaseUrl || !publishableKey) {
+        return new Response(JSON.stringify({ error: "Public Supabase configuration is unavailable in Worker runtime secrets." }), {
+          status: 503,
+          headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+        });
+      }
+      return new Response(JSON.stringify({ supabaseUrl, supabasePublishableKey: publishableKey }), {
+        headers: { "Content-Type": "application/json", "Cache-Control": "no-store, max-age=0" },
+      });
+    }
     if (url.pathname === "/api/lead") return handleLead(request, env);
     if (url.pathname === "/api/staff/invite") return handleStaffInvite(request, env);
     return env.ASSETS.fetch(request);
