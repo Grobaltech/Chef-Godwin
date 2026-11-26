@@ -89,6 +89,27 @@ const STATUS_OPTIONS = {
 };
 
 const money = (value, currency = 'UGX') => value == null ? '—' : new Intl.NumberFormat('en-UG', { style: 'currency', currency, maximumFractionDigits: 0 }).format(Number(value));
+
+const MAX_IMAGE_BYTES = 25 * 1024 * 1024;
+const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'image/gif'];
+
+function validateGalleryImage(file) {
+  if (!IMAGE_TYPES.includes(file.type)) throw new Error('Choose a JPEG, PNG, WebP, AVIF or GIF image.');
+  if (file.size > MAX_IMAGE_BYTES) throw new Error('This image is larger than 25 MB. Please choose a smaller original file.');
+}
+
+async function uploadGalleryImage(file) {
+  validateGalleryImage(file);
+  const extension = file.name.split('.').pop()?.toLowerCase() || 'img';
+  const path = `gallery/${crypto.randomUUID()}.${extension}`;
+  const { error } = await supabase.storage.from('chef-godwin-media').upload(path, file, {
+    cacheControl: '31536000',
+    contentType: file.type,
+    upsert: false
+  });
+  if (error) throw error;
+  return supabase.storage.from('chef-godwin-media').getPublicUrl(path).data.publicUrl;
+}
 const date = value => value ? new Date(value).toLocaleString() : '—';
 
 const ROLE_MODULES = {
@@ -119,6 +140,8 @@ export default function AdminDashboard({ user, profile, onSignOut }) {
   const [creating, setCreating] = useState(false);
   const [editingRow, setEditingRow] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState('');
   const [inviteBusy, setInviteBusy] = useState(false);
   const role = profile?.role || 'staff';
   const visibleModules = ['owner','admin'].includes(role) ? MODULES : MODULES.filter(item => (ROLE_MODULES[role] || ['overview']).includes(item.key));
@@ -151,8 +174,15 @@ export default function AdminDashboard({ user, profile, onSignOut }) {
 
   useEffect(() => { loadCounts(); }, []);
   useEffect(() => {
+    if (!selectedImage) { setImagePreview(''); return undefined; }
+    const previewUrl = URL.createObjectURL(selectedImage);
+    setImagePreview(previewUrl);
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [selectedImage]);
+  useEffect(() => {
     setSearch('');
     setEditingRow(null);
+    setSelectedImage(null);
     if (module?.table) loadRows(module.table);
     else setRows([]);
   }, [active]);
@@ -207,31 +237,54 @@ export default function AdminDashboard({ user, profile, onSignOut }) {
 
   async function saveNew(event) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    const values = Object.fromEntries(form.entries());
-    if (values.sort_order !== undefined) values.sort_order = values.sort_order === '' ? null : Number(values.sort_order);
-    const { error } = await supabase.from(module.table).insert(values);
-    if (error) setNotice(error.message);
-    else {
-      setNotice('New record saved.');
+    setSaving(true);
+    setNotice('');
+    try {
+      const values = Object.fromEntries(new FormData(event.currentTarget).entries());
+      if (values.sort_order !== undefined) values.sort_order = values.sort_order === '' ? null : Number(values.sort_order);
+      if (active === 'gallery_items') {
+        if (selectedImage) {
+          values.media_url = await uploadGalleryImage(selectedImage);
+          values.media_type = 'image';
+        } else if (!values.media_url?.trim()) {
+          throw new Error('Choose an image to upload or provide an existing media URL.');
+        }
+      }
+      const { error } = await supabase.from(module.table).insert(values);
+      if (error) throw error;
+      setNotice(active === 'gallery_items' ? 'Photo uploaded and gallery record saved.' : 'New record saved.');
       setCreating(false);
+      setSelectedImage(null);
       loadRows(module.table);
       loadCounts();
-    }
+    } catch (error) {
+      setNotice(error.message || 'Could not save this record.');
+    } finally { setSaving(false); }
   }
 
   async function saveGalleryEdit(event) {
     event.preventDefault();
     if (!editingRow) return;
-    const values = Object.fromEntries(new FormData(event.currentTarget).entries());
-    values.sort_order = values.sort_order === '' ? null : Number(values.sort_order);
-    const { error } = await supabase.from('gallery_items').update(values).eq('id', editingRow.id);
-    if (error) setNotice(error.message);
-    else {
+    setSaving(true);
+    setNotice('');
+    try {
+      const values = Object.fromEntries(new FormData(event.currentTarget).entries());
+      values.sort_order = values.sort_order === '' ? null : Number(values.sort_order);
+      if (selectedImage) {
+        values.media_url = await uploadGalleryImage(selectedImage);
+        values.media_type = 'image';
+      } else if (!values.media_url?.trim()) {
+        throw new Error('Choose a replacement image or provide an existing media URL.');
+      }
+      const { error } = await supabase.from('gallery_items').update(values).eq('id', editingRow.id);
+      if (error) throw error;
       setNotice('Homepage photo updated.');
       setEditingRow(null);
+      setSelectedImage(null);
       loadRows('gallery_items');
-    }
+    } catch (error) {
+      setNotice(error.message || 'Could not update this photo.');
+    } finally { setSaving(false); }
   }
 
   const canCreate = ['leads', 'customers', 'crm_activities', 'events', 'content_pages', 'services', 'courses', 'menu_items', 'gallery_items', 'testimonials'].includes(active) && !(role === 'content_editor' && ['courses','menu_items'].includes(active));
@@ -322,17 +375,19 @@ export default function AdminDashboard({ user, profile, onSignOut }) {
             {editingRow && active === 'gallery_items' && <form onSubmit={saveGalleryEdit} className="grid gap-3 rounded-2xl border border-saffron/40 bg-white p-5 sm:grid-cols-2">
               <h3 className="font-extrabold sm:col-span-2">Edit homepage photo or gallery item</h3>
               <label className="grid gap-1 text-xs font-bold text-stone-600">Title<input name="title" required defaultValue={editingRow.title || ''} className="rounded-lg border border-stone-200 px-3 py-2 text-sm font-normal" /></label>
-              <label className="grid gap-1 text-xs font-bold text-stone-600">Image or video URL<input name="media_url" required type="url" defaultValue={editingRow.media_url || ''} className="rounded-lg border border-stone-200 px-3 py-2 text-sm font-normal" /></label>
+              <label className="grid gap-1 text-xs font-bold text-stone-600 sm:col-span-2">Upload a replacement image<input type="file" accept="image/jpeg,image/png,image/webp,image/avif,image/gif" onChange={e => setSelectedImage(e.target.files?.[0] || null)} className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm font-normal" /><span className="font-normal text-stone-500">Original quality preserved • JPEG, PNG, WebP, AVIF or GIF • up to 25 MB</span>{imagePreview && <img src={imagePreview} alt="Selected replacement preview" className="mt-2 max-h-48 w-full rounded-xl object-contain object-left" />}</label>
+              <label className="grid gap-1 text-xs font-bold text-stone-600 sm:col-span-2">Or keep/change the existing image or video URL<input name="media_url" type="url" defaultValue={editingRow.media_url || ''} className="rounded-lg border border-stone-200 px-3 py-2 text-sm font-normal" /></label>
               <label className="grid gap-1 text-xs font-bold text-stone-600">Media type<select name="media_type" defaultValue={editingRow.media_type || 'image'} className="rounded-lg border border-stone-200 px-3 py-2 text-sm font-normal"><option value="image">Image</option><option value="video">Video</option></select></label>
               <label className="grid gap-1 text-xs font-bold text-stone-600">Category<input name="category" defaultValue={editingRow.category || ''} className="rounded-lg border border-stone-200 px-3 py-2 text-sm font-normal" /></label>
               <label className="grid gap-1 text-xs font-bold text-stone-600 sm:col-span-2">Description<textarea name="description" rows="2" defaultValue={editingRow.description || ''} className="rounded-lg border border-stone-200 px-3 py-2 text-sm font-normal" /></label>
               <label className="grid gap-1 text-xs font-bold text-stone-600">Alternative text<input name="alt_text" defaultValue={editingRow.alt_text || ''} className="rounded-lg border border-stone-200 px-3 py-2 text-sm font-normal" /></label>
               <label className="grid gap-1 text-xs font-bold text-stone-600">Display order<input name="sort_order" type="number" min="0" defaultValue={editingRow.sort_order ?? 0} className="rounded-lg border border-stone-200 px-3 py-2 text-sm font-normal" /></label>
               <label className="grid gap-1 text-xs font-bold text-stone-600">Publishing status<select name="status" defaultValue={editingRow.status || 'draft'} className="rounded-lg border border-stone-200 px-3 py-2 text-sm font-normal"><option value="draft">Draft</option><option value="published">Published</option><option value="archived">Archived</option></select></label>
-              <div className="flex gap-2 sm:col-span-2"><button className="rounded-lg bg-leaf px-4 py-2 text-sm font-bold text-white">Save changes</button><button type="button" onClick={() => setEditingRow(null)} className="rounded-lg border border-stone-200 px-4 py-2 text-sm font-bold">Cancel</button></div>
+              <div className="flex gap-2 sm:col-span-2"><button disabled={saving} className="rounded-lg bg-leaf px-4 py-2 text-sm font-bold text-white">{saving ? 'Saving photo…' : 'Save changes'}</button><button type="button" onClick={() => { setEditingRow(null); setSelectedImage(null); }} className="rounded-lg border border-stone-200 px-4 py-2 text-sm font-bold">Cancel</button></div>
             </form>}
             {creating && active !== 'staff_profiles' && <form onSubmit={saveNew} className="grid gap-3 rounded-2xl border border-stone-200 bg-white p-5 sm:grid-cols-2">
               <h3 className="font-extrabold sm:col-span-2">Create {module.label.toLowerCase()}</h3>
+              {active === 'gallery_items' && <label className="grid gap-1 text-xs font-bold text-stone-600 sm:col-span-2">Upload a high-quality image<input type="file" accept="image/jpeg,image/png,image/webp,image/avif,image/gif" onChange={e => setSelectedImage(e.target.files?.[0] || null)} className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm font-normal" /><span className="font-normal text-stone-500">Original file is stored unchanged • JPEG, PNG, WebP, AVIF or GIF • maximum 25 MB</span>{imagePreview && <img src={imagePreview} alt="Selected image preview" className="mt-2 max-h-56 w-full rounded-xl object-contain object-left" />}</label>}
               {(active === 'leads' ? ['full_name','phone','email','interest','source','status','notes'] :
                 active === 'customers' ? ['full_name','phone','email','source','notes'] :
                 active === 'events' ? ['title','event_type','description','venue','starts_at','ends_at','status'] :
@@ -341,9 +396,9 @@ export default function AdminDashboard({ user, profile, onSignOut }) {
                 active === 'services' ? ['title','slug','summary','price_label','image_url','status'] :
                 active === 'courses' ? ['title','slug','summary','duration_label','level','fee','status'] :
                 active === 'menu_items' ? ['name','description','price','currency','image_url','status'] :
-                active === 'gallery_items' ? ['title','description','media_url','media_type','category','alt_text','sort_order','status'] :
-                ['customer_name','customer_title','quote','rating','status']).map(field => <label key={field} className="grid gap-1 text-xs font-bold text-stone-600">{FIELD_LABELS[field] || field}<input name={field} required={['title','slug','full_name','name','phone','interest','quote','customer_name','media_url'].includes(field)} type={field.includes('date') || field.endsWith('_at') ? 'datetime-local' : field === 'fee' || field === 'rating' || field === 'price' || field === 'sort_order' ? 'number' : 'text'} defaultValue={field === 'status' ? (STATUS_OPTIONS[active]?.[0] || 'new') : field === 'currency' ? 'UGX' : field === 'sort_order' ? '0' : ''} className="rounded-lg border border-stone-200 px-3 py-2 text-sm font-normal" /></label>)}
-              <div className="flex gap-2 sm:col-span-2"><button disabled={saving} className="rounded-lg bg-leaf px-4 py-2 text-sm font-bold text-white">Save record</button><button type="button" onClick={()=>setCreating(false)} className="rounded-lg border border-stone-200 px-4 py-2 text-sm font-bold">Cancel</button></div>
+                active === 'gallery_items' ? ['title','description','media_type','category','alt_text','sort_order','status'] :
+                ['customer_name','customer_title','quote','rating','status']).map(field => <label key={field} className="grid gap-1 text-xs font-bold text-stone-600">{FIELD_LABELS[field] || field}<input name={field} required={['title','slug','full_name','name','phone','interest','quote','customer_name'].includes(field)} type={field.includes('date') || field.endsWith('_at') ? 'datetime-local' : field === 'fee' || field === 'rating' || field === 'price' || field === 'sort_order' ? 'number' : 'text'} defaultValue={field === 'status' ? (STATUS_OPTIONS[active]?.[0] || 'new') : field === 'currency' ? 'UGX' : field === 'sort_order' ? '0' : ''} className="rounded-lg border border-stone-200 px-3 py-2 text-sm font-normal" /></label>)}
+              <div className="flex gap-2 sm:col-span-2"><button disabled={saving} className="rounded-lg bg-leaf px-4 py-2 text-sm font-bold text-white">{saving ? 'Saving…' : 'Save record'}</button><button type="button" onClick={()=>{setCreating(false);setSelectedImage(null);}} className="rounded-lg border border-stone-200 px-4 py-2 text-sm font-bold">Cancel</button></div>
             </form>}
 
             <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white">
