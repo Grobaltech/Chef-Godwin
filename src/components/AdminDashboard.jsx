@@ -91,6 +91,16 @@ const STATUS_OPTIONS = {
 const money = (value, currency = 'UGX') => value == null ? '—' : new Intl.NumberFormat('en-UG', { style: 'currency', currency, maximumFractionDigits: 0 }).format(Number(value));
 const date = value => value ? new Date(value).toLocaleString() : '—';
 
+const ROLE_MODULES = {
+  manager: ['overview','leads','catering_bookings','school_applications','customers','crm_activities','events','payments','content_pages','services','courses','menu_items','gallery_items','testimonials','site_settings'],
+  content_editor: ['overview','content_pages','services','courses','menu_items','gallery_items','testimonials','site_settings'],
+  chef: ['overview','menu_items'],
+  events: ['overview','leads','catering_bookings','customers','crm_activities','events'],
+  admissions: ['overview','leads','school_applications','customers','crm_activities','courses'],
+  finance: ['overview','catering_bookings','school_applications','customers','crm_activities','payments'],
+  receptionist: ['overview','leads','catering_bookings','school_applications','customers','crm_activities','events']
+};
+
 function Metric({ label, value, detail, tone = '' }) {
   return <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
     <p className="text-sm font-semibold text-stone-500">{label}</p>
@@ -109,8 +119,9 @@ export default function AdminDashboard({ user, profile, onSignOut }) {
   const [creating, setCreating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [inviteBusy, setInviteBusy] = useState(false);
-  const module = MODULES.find(item => item.key === active);
   const role = profile?.role || 'staff';
+  const visibleModules = ['owner','admin'].includes(role) ? MODULES : MODULES.filter(item => (ROLE_MODULES[role] || ['overview']).includes(item.key));
+  const module = visibleModules.find(item => item.key === active);
 
   async function loadCounts() {
     const tables = MODULES.filter(item => item.table && item.table !== 'site_settings');
@@ -204,7 +215,7 @@ export default function AdminDashboard({ user, profile, onSignOut }) {
     }
   }
 
-  const canCreate = ['leads', 'customers', 'crm_activities', 'events', 'content_pages', 'services', 'courses', 'menu_items', 'gallery_items', 'testimonials'].includes(active);
+  const canCreate = ['leads', 'customers', 'crm_activities', 'events', 'content_pages', 'services', 'courses', 'menu_items', 'gallery_items', 'testimonials'].includes(active) && !(role === 'content_editor' && ['courses','menu_items'].includes(active));
 
   return <div className="min-h-screen bg-[#f6f5f0] text-ink">
     <div className="flex min-h-screen">
@@ -215,7 +226,7 @@ export default function AdminDashboard({ user, profile, onSignOut }) {
           <div className="mt-1 text-xs text-white/60">Website + customer operations</div>
         </div>
         <nav className="flex-1 space-y-1 overflow-y-auto p-3">
-          {MODULES.map(item => <button key={item.key} onClick={() => { setActive(item.key); setCreating(false); }} className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition ${active === item.key ? 'bg-saffron text-ink' : 'text-white/75 hover:bg-white/10 hover:text-white'}`}>
+          {visibleModules.map(item => <button key={item.key} onClick={() => { setActive(item.key); setCreating(false); }} className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition ${active === item.key ? 'bg-saffron text-ink' : 'text-white/75 hover:bg-white/10 hover:text-white'}`}>
             <span className="w-5 text-center text-base">{item.icon}</span><span className="flex-1">{item.label}</span>
             {item.table && counts[item.table] > 0 && <span className="rounded-full bg-white/15 px-2 py-0.5 text-[10px]">{counts[item.table]}</span>}
           </button>)}
@@ -241,7 +252,7 @@ export default function AdminDashboard({ user, profile, onSignOut }) {
 
         <div className="space-y-6 p-4 sm:p-8">
           <div className="flex gap-2 overflow-x-auto pb-1 lg:hidden">
-            {MODULES.map(item => <button key={item.key} onClick={() => setActive(item.key)} className={`shrink-0 rounded-full px-3 py-2 text-xs font-bold ${active === item.key ? 'bg-leaf text-white' : 'bg-white text-stone-600'}`}>{item.label}</button>)}
+            {visibleModules.map(item => <button key={item.key} onClick={() => setActive(item.key)} className={`shrink-0 rounded-full px-3 py-2 text-xs font-bold ${active === item.key ? 'bg-leaf text-white' : 'bg-white text-stone-600'}`}>{item.label}</button>)}
           </div>
 
           {notice && <div className="rounded-xl border border-saffron/40 bg-saffron/10 px-4 py-3 text-sm text-ink" role="status">{notice}</div>}
