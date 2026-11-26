@@ -79,7 +79,7 @@ function PublicSite({ onAdmin }) {
   return <>
     <header className="sticky top-0 z-20 bg-leaf text-white shadow-md" style={{paddingTop:'env(safe-area-inset-top, 0px)'}}><div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
       <a href="#top" className="flex items-center gap-3"><img src="/logo.jpg" alt="Chef Godwin emblem" className="h-12 w-10 rounded-sm object-contain"/><span className="font-display text-lg font-extrabold">Chef Godwin</span></a>
-      <nav className="flex items-center gap-3 text-xs font-semibold sm:gap-5 sm:text-sm"><a href="#catering">Catering</a><a href="#school">School</a>{menu.length>0&&<a href="#menu">Menu</a>}<a href={contact('Hello Chef Godwin')} className="rounded-lg bg-saffron px-3 py-2 text-ink">WhatsApp</a></nav>
+      <nav className="flex items-center gap-3 text-xs font-semibold sm:gap-5 sm:text-sm"><a href="#experiences">Restaurant</a><a href="#experiences">Bakery</a><a href="#catering">Catering</a><a href="#school">School</a>{menu.length>0&&<a href="#menu">Menu</a>}<a href={contact('Hello Chef Godwin')} className="rounded-lg bg-saffron px-3 py-2 text-ink">WhatsApp</a></nav>
     </div></header>
     <main id="top">
       <section className="relative isolate min-h-[620px] overflow-hidden bg-leaf text-white sm:min-h-[700px]">
@@ -115,6 +115,19 @@ function PublicSite({ onAdmin }) {
           <p className="text-[10px] font-bold uppercase tracking-widest">Our promise</p>
           <p className="mt-1 text-lg font-extrabold">Every plate tells a story.</p>
         </div>
+      </section>
+      <section id="experiences" className="relative z-10 mx-auto -mt-5 grid max-w-6xl gap-3 px-4 pb-8 sm:grid-cols-2 lg:grid-cols-4">
+        {[
+          {icon:'🍽️',title:'Restaurant',description:'Freshly prepared meals, served with care.',href:menu.length?'#menu':'#catering'},
+          {icon:'🧁',title:'Bakery',description:'Cakes, pastries and freshly baked treats.',href:menu.length?'#menu':'#catering'},
+          {icon:'🥂',title:'Catering',description:'Thoughtful food service for your occasions.',href:'#catering'},
+          {icon:'🎓',title:'Culinary school',description:'Practical skills for the next generation.',href:'#school'}
+        ].map(item=><a key={item.title} href={item.href} className="group rounded-2xl border border-stone-200 bg-white p-5 shadow-lg transition hover:-translate-y-1 hover:border-saffron hover:shadow-xl">
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-saffron/20 text-2xl">{item.icon}</span>
+          <h2 className="mt-4 font-extrabold text-leaf">{item.title}</h2>
+          <p className="mt-1 text-sm leading-6 text-stone-500">{item.description}</p>
+          <span className="mt-3 inline-block text-xs font-extrabold text-chili">Explore <span aria-hidden="true">→</span></span>
+        </a>)}
       </section>
       <section id="catering" className="mx-auto grid max-w-6xl gap-12 px-4 py-20 lg:grid-cols-2"><div><p className="text-xs font-extrabold uppercase tracking-widest text-chili">Gather beautifully</p><h2 className="mt-3 text-4xl font-extrabold text-leaf">Catering for your big moments.</h2><p className="mt-5 max-w-lg leading-7 text-stone-600">From traditional introductions and weddings to private celebrations and corporate occasions, tell us what you are planning. Our team will help shape the menu and details.</p><div className="mt-7 grid gap-3 sm:grid-cols-2">{shownServices.map(item=><div key={item.id} className="rounded-2xl border border-stone-200 bg-white p-4"><h3 className="font-extrabold text-leaf">{item.title}</h3><p className="mt-1 text-sm text-stone-500">{item.summary}</p>{item.price_label&&<p className="mt-2 text-sm font-bold text-chili">{item.price_label}</p>}</div>)}</div></div><div className="rounded-3xl bg-white p-5 shadow-xl ring-1 ring-stone-200 sm:p-8"><h3 className="mb-5 text-2xl font-extrabold text-leaf">Tell us about your event</h3><LeadForm kind="catering" eventTypes={EVENT_TYPES}/></div></section>
       <section id="school" className="bg-[#f1eee4] py-20"><div className="mx-auto grid max-w-6xl gap-12 px-4 lg:grid-cols-2"><div><p className="text-xs font-extrabold uppercase tracking-widest text-chili">Learn the craft</p><h2 className="mt-3 text-4xl font-extrabold text-leaf">A cooking school built around real kitchen skills.</h2><p className="mt-5 max-w-lg leading-7 text-stone-600">Build confidence, learn technique and understand how to prepare food for people. Explore the current courses and send an application.</p><LearningFlipbook courses={shownCourses}/><div className="mt-7 grid gap-3">{shownCourses.map(course=><div key={course.id} className="rounded-2xl bg-white p-5 shadow-sm"><div className="flex items-start justify-between gap-3"><h3 className="font-extrabold text-leaf">{course.title}</h3>{course.duration_label&&<span className="shrink-0 rounded-full bg-saffron/20 px-3 py-1 text-xs font-bold">{course.duration_label}</span>}</div><p className="mt-2 text-sm text-stone-500">{course.summary}</p>{course.fee!=null&&<p className="mt-3 font-bold text-chili">{new Intl.NumberFormat('en-UG').format(course.fee)} {course.currency||'UGX'}</p>}</div>)}</div></div><div className="rounded-3xl bg-white p-5 shadow-xl sm:p-8"><h3 className="mb-5 text-2xl font-extrabold text-leaf">Apply to the cooking school</h3><LeadForm kind="school" courses={shownCourses}/></div></div></section>
